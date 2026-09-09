@@ -537,30 +537,24 @@ function renderHistorialChart(dataDesc){
   var scalesX = chrono.length > 40
     ? {grid:{display:false}, ticks:{color:cssVar('--ink-muted'), autoSkip:false, maxRotation:0, callback:function(v,i){var lbl=chrono[i].fecha; return lbl.slice(0,2)==='01' ? lbl.slice(3) : '';}}}
     : {grid:{display:false}, ticks:{color:cssVar('--ink-muted'), autoSkip:true, maxTicksLimit:12}};
-  if(historialChart){
-    historialChart.data.labels = labels;
-    historialChart.data.datasets[0].data = values;
-    historialChart.options.scales.x = scalesX;
-    historialChart.update();
-  } else {
-    var ctx = document.getElementById('chartHistorial');
-    historialChart = new Chart(ctx,{
-      type:'line',
-      data:{labels:labels, datasets:[{
-        data:values,
-        borderColor:cssVar('--series-1'), backgroundColor:cssVar('--series-1-soft'),
-        fill:true, pointRadius:0, borderWidth:1.5, tension:.15,
-      }]},
-      options:{responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false}, tooltip:{callbacks:{
-          title:function(items){return chrono[items[0].dataIndex].fecha + ' · ' + chrono[items[0].dataIndex].dia;},
-          label:function(c){return fmtCLP(c.parsed.y)+' ('+chrono[c.dataIndex].transacciones+' transac.)';}
-        }}},
-        scales:{x:scalesX,
-                 y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted'), callback:function(v){return fmtCLP(v);}}}},
-      }
-    });
-  }
+  if(historialChart){ historialChart.destroy(); }
+  var ctx = document.getElementById('chartHistorial');
+  historialChart = new Chart(ctx,{
+    type:'line',
+    data:{labels:labels, datasets:[{
+      data:values,
+      borderColor:cssVar('--series-1'), backgroundColor:cssVar('--series-1-soft'),
+      fill:true, pointRadius:0, borderWidth:1.5, tension:.15,
+    }]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{
+        title:function(items){return chrono[items[0].dataIndex].fecha + ' · ' + chrono[items[0].dataIndex].dia;},
+        label:function(c){return fmtCLP(c.parsed.y)+' ('+chrono[c.dataIndex].transacciones+' transac.)';}
+      }}},
+      scales:{x:scalesX,
+               y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted'), callback:function(v){return fmtCLP(v);}}}},
+    }
+  });
 }
 function renderDiario(filtro){
   var tb=document.getElementById('tbodyDiario'); tb.innerHTML='';
@@ -568,13 +562,13 @@ function renderDiario(filtro){
     tb.innerHTML+='<tr><td>'+d.fecha+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td></tr>';
   });
 }
-renderHistorialChart(historialData);
 renderDiario('');
+renderHistorialChart(historialData);
 document.getElementById('buscar').addEventListener('input', function(e){renderDiario(e.target.value);});
 buildDateFilter('histFiltro', function(filtered){
   historialData = filtered;
-  renderHistorialChart(filtered);
   renderDiario(document.getElementById('buscar').value);
+  renderHistorialChart(filtered);
 });
 
 /* ---------- N-05 hora pico ---------- */
@@ -588,25 +582,24 @@ function renderHoraPico(dataArr, label){
   var horasArr = sumarHoras(dataArr, 'horas');
   var horasOcupArr = sumarHoras(dataArr, 'horasOcup');
   var xLabels = horasArr.map(function(v,h){return h+'h';});
-  if(chartHP){ chartHP.data.labels = xLabels; chartHP.data.datasets[0].data = horasArr; chartHP.update(); }
-  else {
-    chartHP = barChart(document.getElementById('chartHoraPico'), xLabels, horasArr, {thick:16, scales:{
-      x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
-      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Cantidad de pagos', color:cssVar('--ink-muted'), font:{size:10}}},
-    }});
-  }
-  if(chartHPO){ chartHPO.data.labels = xLabels; chartHPO.data.datasets[0].data = horasOcupArr; chartHPO.update(); }
-  else {
-    chartHPO = barChart(document.getElementById('chartHoraPicoOcup'), xLabels, horasOcupArr, {thick:16, colors:cssVar('--accent'), scales:{
-      x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
-      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Ocupación estimada (autos·hora)', color:cssVar('--ink-muted'), font:{size:9}}},
-    }});
-  }
+
   var tb = document.getElementById('tbodyHoraPico'); tb.innerHTML='';
   horasArr.forEach(function(v,h){
     tb.innerHTML += '<tr><td>'+h+':00</td><td>'+v+'</td><td>'+horasOcupArr[h]+'</td></tr>';
   });
   document.getElementById('horaPicoLabel').textContent = label;
+
+  if(chartHP){ chartHP.destroy(); }
+  chartHP = barChart(document.getElementById('chartHoraPico'), xLabels, horasArr, {thick:16, scales:{
+    x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
+    y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Cantidad de pagos', color:cssVar('--ink-muted'), font:{size:10}}},
+  }});
+
+  if(chartHPO){ chartHPO.destroy(); }
+  chartHPO = barChart(document.getElementById('chartHoraPicoOcup'), xLabels, horasOcupArr, {thick:16, colors:cssVar('--accent'), scales:{
+    x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
+    y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Ocupación estimada (autos·hora)', color:cssVar('--ink-muted'), font:{size:9}}},
+  }});
 }
 renderHoraPico(daily, 'Año completo');
 buildDateFilter('horaPicoFiltro', function(filtered, label){ renderHoraPico(filtered, label); });
@@ -624,17 +617,7 @@ function sumarBuckets(dataArr){
 function renderDistribucion(dataArr, label){
   var counts = sumarBuckets(dataArr);
   var total = counts.reduce(function(a,b){return a+b;},0);
-  if(chartBuckets){ chartBuckets.data.datasets[0].data = counts; chartBuckets.update(); }
-  else {
-    chartBuckets = barChart(document.getElementById('chartBuckets'), bucketShortLabels, counts,
-      {colors:bucketRamp, thick:44, tooltipLabel:function(c){
-        var pct = total>0 ? (c.parsed.y/total*100).toFixed(1) : '0';
-        return bucketLabelsFull[c.dataIndex]+': '+c.parsed.y+' ('+pct+'%)';
-      }, scales:{
-        x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}},
-        y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true},
-      }});
-  }
+
   var tb = document.getElementById('tbodyBuckets'); tb.innerHTML='';
   counts.forEach(function(c,i){
     var pct = total>0 ? (c/total*100).toFixed(1) : '0';
@@ -648,6 +631,16 @@ function renderDistribucion(dataArr, label){
       'A la tarifa actual ('+tarifaMinActual+' CLP/min), esos cortes equivalen aprox. a '+mins.join(', ')+' minutos. '+
       'Como la tarifa sube con el tiempo, esta equivalencia se corre — los rangos en pesos no se ajustan solos.';
   }
+
+  if(chartBuckets){ chartBuckets.destroy(); }
+  chartBuckets = barChart(document.getElementById('chartBuckets'), bucketShortLabels, counts,
+    {colors:bucketRamp, thick:44, tooltipLabel:function(c){
+      var pct = total>0 ? (c.parsed.y/total*100).toFixed(1) : '0';
+      return bucketLabelsFull[c.dataIndex]+': '+c.parsed.y+' ('+pct+'%)';
+    }, scales:{
+      x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}},
+      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true},
+    }});
 }
 renderDistribucion(daily, 'Año completo');
 buildDateFilter('distribFiltro', function(filtered, label){ renderDistribucion(filtered, label); });
