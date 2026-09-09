@@ -237,10 +237,9 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
 
   <div class="card" id="sec-horapico">
     <h2><span class="code">N&middot;05</span>Hora pico</h2>
-    <p class="note">Izquierda: momento del cobro (&ldquo;Fecha Creaci&oacute;n&rdquo;). Derecha: ocupaci&oacute;n estimada (asume pago al salir; los pagos con tarifa m&aacute;xima se incluyen con una duraci&oacute;n m&iacute;nima estimada, ya que su duraci&oacute;n real no se puede calcular exacta).</p>
     <div class="grid-2">
-      <div><h3>Hora del pago</h3><div class="chart-box"><canvas id="chartHoraPico"></canvas></div></div>
-      <div><h3>Ocupaci&oacute;n estimada</h3><div class="chart-box"><canvas id="chartHoraPicoOcup"></canvas></div></div>
+      <div><h3>Hora del pago</h3><p class="note" style="margin:0 0 10px;">Momento del cobro seg&uacute;n &ldquo;Fecha Creaci&oacute;n&rdquo;.</p><div class="chart-box"><canvas id="chartHoraPico"></canvas></div></div>
+      <div><h3>Ocupaci&oacute;n estimada</h3><p class="note" style="margin:0 0 10px;">Asume pago al salir; los pagos con tarifa m&aacute;xima usan una duraci&oacute;n m&iacute;nima estimada, ya que su duraci&oacute;n real no se puede calcular exacta.</p><div class="chart-box"><canvas id="chartHoraPicoOcup"></canvas></div></div>
     </div>
     <div class="scroll" style="max-height:220px;margin-top:16px;">
       <table><thead><tr><th>Hora</th><th>Pagos</th><th>Ocupaci&oacute;n (est.)</th></tr></thead>
@@ -265,11 +264,13 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
       <div><h3>Mejores 10</h3><div class="tblwrap"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th></tr></thead><tbody id="tbodyMejores"></tbody></table></div></div>
       <div><h3>Peores 10</h3><div class="tblwrap"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th></tr></thead><tbody id="tbodyPeores"></tbody></table></div></div>
     </div>
+    <p class="note" style="margin-top:12px;margin-bottom:0;">El aviso &ldquo;&#9888; revisar&rdquo; en un d&iacute;a significa que sus transacciones fueron muy inferiores a lo t&iacute;pico para ese d&iacute;a de la semana &mdash; puede ser un d&iacute;a real flojo, o una sincronizaci&oacute;n incompleta con ParkingApp. Conviene revisarlo manualmente.</p>
   </div>
 
   <div class="card" id="sec-estadia">
     <h2><span class="code">N&middot;08</span>Estad&iacute;a y tarifa m&aacute;xima</h2>
-    <p class="note">Estad&iacute;a = monto &divide; tarifa por minuto (21 CLP hasta mayo 2026, 25 CLP desde junio 2026). Excluye pagos con tarifa m&aacute;xima &mdash; ah&iacute; el cobro est&aacute; topado y la duraci&oacute;n real no se puede derivar del monto, as&iacute; que incluirlos sesgar&iacute;a el promedio hacia abajo (ver N&middot;05 para c&oacute;mo se estima su ocupaci&oacute;n como piso m&iacute;nimo). Los resumen num&eacute;ricos est&aacute;n en la franja superior &mdash; <span class="backlink"><a href="#kpiRow">volver arriba &uarr;</a></span>.</p>
+    <div class="statpair" id="estadiaStats"></div>
+    <p class="note" style="margin-top:14px;">Estad&iacute;a = monto &divide; tarifa por minuto (21 CLP hasta mayo 2026, 25 CLP desde junio 2026). Excluye pagos con tarifa m&aacute;xima &mdash; ah&iacute; el cobro est&aacute; topado y la duraci&oacute;n real no se puede derivar del monto, as&iacute; que incluirlos sesgar&iacute;a el promedio hacia abajo (ver N&middot;05 para c&oacute;mo se estima su ocupaci&oacute;n como piso m&iacute;nimo).</p>
   </div>
 
   <div class="card" id="sec-heatmap">
@@ -420,9 +421,12 @@ barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function
   }
   var ponderada = cobradoMesActual+restante;
   document.getElementById('proyeccionTxt').innerHTML =
-    'Recaudado en <b>'+nombreMesActual+'</b> hasta el día '+diasTranscurridosMesActual+' de '+diasTotalesMesActual+': <b>'+fmtCLP(cobradoMesActual)+'</b>.<br>'+
-    'Proyección lineal simple: <b>'+fmtCLP(proyeccionMesActual)+'</b> &middot; Ponderada por día de semana: <b>'+fmtCLP(ponderada)+'</b><br>'+
-    '<span style="color:var(--ink-muted);font-size:11.5px;">La ponderada usa el promedio histórico de cada día de semana para estimar lo que falta del mes.</span>';
+    '<ul style="margin:4px 0 0 18px;padding:0;list-style:disc;">'+
+    '<li style="margin-bottom:4px;">Recaudado en <b>'+nombreMesActual+'</b> hasta el día '+diasTranscurridosMesActual+' de '+diasTotalesMesActual+': <b>'+fmtCLP(cobradoMesActual)+'</b></li>'+
+    '<li style="margin-bottom:4px;">Proyección lineal simple: <b>'+fmtCLP(proyeccionMesActual)+'</b></li>'+
+    '<li>Proyección ponderada por día de semana: <b>'+fmtCLP(ponderada)+'</b></li>'+
+    '</ul>'+
+    '<span style="display:block;margin-top:8px;color:var(--ink-muted);font-size:11.5px;">La ponderada usa el promedio histórico de cada día de semana para estimar lo que falta del mes.</span>';
   document.getElementById('proyeccionBar').style.width = Math.min(100, diasTranscurridosMesActual/diasTotalesMesActual*100)+'%';
 })();
 
@@ -466,19 +470,20 @@ function renderDiaSemana(mes){
 /* ---------- N-04 historial ---------- */
 (function(){
   var ctx=document.getElementById('chartHistorial');
+  var dailyChrono = daily.slice().reverse();
   new Chart(ctx,{
     type:'line',
-    data:{labels:daily.map(function(d){return d.fecha.slice(0,5);}), datasets:[{
-      data:daily.map(function(d){return d.monto;}),
+    data:{labels:dailyChrono.map(function(d){return d.fecha;}), datasets:[{
+      data:dailyChrono.map(function(d){return d.monto;}),
       borderColor:cssVar('--series-1'), backgroundColor:cssVar('--series-1-soft'),
       fill:true, pointRadius:0, borderWidth:1.5, tension:.15,
     }]},
     options:{responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}, tooltip:{callbacks:{
-        title:function(items){return daily[items[0].dataIndex].fecha + ' · ' + daily[items[0].dataIndex].dia;},
-        label:function(c){return fmtCLP(c.parsed.y)+' ('+daily[c.dataIndex].transacciones+' transac.)';}
+        title:function(items){return dailyChrono[items[0].dataIndex].fecha + ' · ' + dailyChrono[items[0].dataIndex].dia;},
+        label:function(c){return fmtCLP(c.parsed.y)+' ('+dailyChrono[c.dataIndex].transacciones+' transac.)';}
       }}},
-      scales:{x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted'), maxTicksLimit:12}},
+      scales:{x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted'), autoSkip:false, maxRotation:0, callback:function(v,i){var lbl=dailyChrono[i].fecha; return lbl.slice(0,2)==='01' ? lbl.slice(3) : '';}}},
                y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted'), callback:function(v){return fmtCLP(v);}}}},
     }
   });
@@ -493,8 +498,14 @@ renderDiario('');
 document.getElementById('buscar').addEventListener('input', function(e){renderDiario(e.target.value);});
 
 /* ---------- N-05 hora pico ---------- */
-barChart(document.getElementById('chartHoraPico'), hourly.map(function(v,h){return h;}), hourly, {thick:16});
-barChart(document.getElementById('chartHoraPicoOcup'), occupancyHourlyData.map(function(v,h){return h;}), occupancyHourlyData, {thick:16, colors:cssVar('--accent')});
+barChart(document.getElementById('chartHoraPico'), hourly.map(function(v,h){return h+'h';}), hourly, {thick:16, scales:{
+  x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
+  y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Cantidad de pagos (año)', color:cssVar('--ink-muted'), font:{size:10}}},
+}});
+barChart(document.getElementById('chartHoraPicoOcup'), occupancyHourlyData.map(function(v,h){return h+'h';}), occupancyHourlyData, {thick:16, colors:cssVar('--accent'), scales:{
+  x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
+  y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Ocupación estimada (autos·hora, año)', color:cssVar('--ink-muted'), font:{size:9}}},
+}});
 (function(){
   var tb = document.getElementById('tbodyHoraPico');
   hourly.forEach(function(v,h){
@@ -546,6 +557,12 @@ barChart(document.getElementById('chartHoraPicoOcup'), occupancyHourlyData.map(f
   rows(top, document.getElementById('tbodyMejores'));
   rows(bottom, document.getElementById('tbodyPeores'));
 })();
+
+/* ---------- N-08 estadia ---------- */
+document.getElementById('estadiaStats').innerHTML = [
+  {v:estadiaProm.toFixed(0)+' min', l:'Estadía promedio (&asymp; '+(estadiaProm/60).toFixed(1)+' h)'},
+  {v:diaCompletoCount.toLocaleString('es-CL'), l:'Pagos con tarifa máxima ('+(totalTransAnio>0?(diaCompletoCount/totalTransAnio*100).toFixed(1):'0')+'% del total)'},
+].map(function(s){ return '<div class="s"><div class="v">'+s.v+'</div><div class="l">'+s.l+'</div></div>'; }).join('');
 
 /* ---------- N-09/10 heatmaps ---------- */
 function renderHeatmap(data, containerId, isOcup){
