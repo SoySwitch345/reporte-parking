@@ -92,8 +92,8 @@ h1.title{font-size:26px; font-weight:700; letter-spacing:-.01em;}
 }
 .navbar .row{max-width:1800px; margin:0 auto; display:flex; flex-wrap:nowrap; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-padding-inline:12px;}
 .navlink{
-  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
-  padding:6px 8px; border-radius:6px; text-decoration:none; white-space:nowrap;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; font-weight:600;
+  padding:9px 14px; border-radius:6px; text-decoration:none; white-space:nowrap;
   color:var(--ink-2); border:1px solid transparent;
 }
 .navlink .n{color:var(--accent); margin-right:6px;}
@@ -352,7 +352,7 @@ const SECTIONS = [
   ['10','sec-tendencia','Tendencia'],
 ];
 document.getElementById('navRow').innerHTML = SECTIONS.map(function(s){
-  return '<a class="navlink" href="#'+s[1]+'">'+s[2]+'</a>';
+  return '<a class="navlink" href="#'+s[1]+'"><span class="n">'+s[0]+'</span>'+s[2]+'</a>';
 }).join('');
 
 /* ---------- KPI strip ---------- */
