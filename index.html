@@ -393,6 +393,7 @@ function barChart(ctx, labels, values, opts){
     }]},
     options:{
       responsive:true, maintainAspectRatio:false,
+      animation: opts.noAnim ? false : undefined,
       plugins:{legend:{display:false}, tooltip:{callbacks:{label: opts.tooltipLabel || function(c){return c.formattedValue;}}}},
       scales: opts.scales || baseScales(),
     }
@@ -547,7 +548,7 @@ function renderHistorialChart(dataDesc){
         borderColor:cssVar('--series-1'), backgroundColor:cssVar('--series-1-soft'),
         fill:true, pointRadius:0, borderWidth:1.5, tension:.15,
       }]},
-      options:{responsive:true, maintainAspectRatio:false,
+      options:{responsive:true, maintainAspectRatio:false, animation:false,
         plugins:{legend:{display:false}, tooltip:{callbacks:{
           title:function(items){return chrono[items[0].dataIndex].fecha + ' · ' + chrono[items[0].dataIndex].dia;},
           label:function(c){return fmtCLP(c.parsed.y)+' ('+chrono[c.dataIndex].transacciones+' transac.)';}
@@ -594,11 +595,11 @@ function renderHoraPico(dataArr, label){
   requestAnimationFrame(function(){
     if(chartHP){ chartHP.destroy(); chartHP = null; }
     if(chartHPO){ chartHPO.destroy(); chartHPO = null; }
-    chartHP = barChart(document.getElementById('chartHoraPico'), xLabels, horasArr, {thick:16, scales:{
+    chartHP = barChart(document.getElementById('chartHoraPico'), xLabels, horasArr, {thick:16, noAnim:true, scales:{
       x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
       y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Cantidad de pagos', color:cssVar('--ink-muted'), font:{size:10}}},
     }});
-    chartHPO = barChart(document.getElementById('chartHoraPicoOcup'), xLabels, horasOcupArr, {thick:16, colors:cssVar('--accent'), scales:{
+    chartHPO = barChart(document.getElementById('chartHoraPicoOcup'), xLabels, horasOcupArr, {thick:16, colors:cssVar('--accent'), noAnim:true, scales:{
       x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
       y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Ocupación estimada (autos·hora)', color:cssVar('--ink-muted'), font:{size:9}}},
     }});
@@ -638,7 +639,7 @@ function renderDistribucion(dataArr, label){
   requestAnimationFrame(function(){
     if(chartBuckets){ chartBuckets.destroy(); chartBuckets = null; }
     chartBuckets = barChart(document.getElementById('chartBuckets'), bucketShortLabels, counts,
-      {colors:bucketRamp, thick:44, tooltipLabel:function(c){
+      {colors:bucketRamp, thick:44, noAnim:true, tooltipLabel:function(c){
         var pct = total>0 ? (c.parsed.y/total*100).toFixed(1) : '0';
         return bucketLabelsFull[c.dataIndex]+': '+c.parsed.y+' ('+pct+'%)';
       }, scales:{
