@@ -1,0 +1,48 @@
+name: Actualizar reporte de parking
+
+on:
+  schedule:
+    # 11:00 UTC ~= 08:00 Chile (UTC-3 en horario de verano, sep-abr) o 07:00
+    # Chile (UTC-4 en horario de invierno, abr-sep). El script usa
+    # zoneinfo America/Santiago para todos los calculos de fecha, asi que
+    # el desfase de 1h dos veces al año no afecta los numeros del reporte,
+    # solo la hora exacta de ejecucion.
+    - cron: '0 11 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar-reporte
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      - name: Actualizar pagos y regenerar reporte
+        env:
+          PARKINGAPP_EMAIL: ${{ secrets.PARKINGAPP_EMAIL }}
+          PARKINGAPP_PASSWORD: ${{ secrets.PARKINGAPP_PASSWORD }}
+        run: python scripts/actualizar_reporte.py
+
+      - name: Commit y push si hubo cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/pagos.json index.html
+          if git diff --cached --quiet; then
+            echo "Sin cambios, no se hace commit."
+          else
+            git commit -m "Actualizar reporte $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          fi

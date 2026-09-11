@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consola Parking 345</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#ffffff;
+  --ink:#0b0b0b; --ink-2:#52514e; --ink-muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --accent:#eb6834; --accent-ink:#fff9f4; --accent-soft:rgba(235,104,52,0.12);
+  --series-1:#2a78d6; --series-1-soft:rgba(42,120,214,0.14);
+  --good:#0ca30c; --critical:#d03b3b;
+  --seq-100:#cde2fb; --seq-250:#86b6ef; --seq-400:#3987e5; --seq-500:#256abf; --seq-600:#184f95;
+  --stripe-a:var(--accent); --stripe-b:var(--ink);
+  --shadow: 0 1px 2px rgba(11,11,11,.05), 0 4px 16px rgba(11,11,11,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#202020;
+    --ink:#ffffff; --ink-2:#c3c2b7; --ink-muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+    --accent:#d95926; --accent-ink:#fff9f4; --accent-soft:rgba(217,89,38,0.18);
+    --series-1:#3987e5; --series-1-soft:rgba(57,135,229,0.20);
+    --seq-100:#184f95; --seq-250:#1c5cab; --seq-400:#256abf; --seq-500:#3987e5; --seq-600:#6da7ec;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 20px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#202020;
+  --ink:#ffffff; --ink-2:#c3c2b7; --ink-muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+  --accent:#d95926; --accent-ink:#fff9f4; --accent-soft:rgba(217,89,38,0.18);
+  --series-1:#3987e5; --series-1-soft:rgba(57,135,229,0.20);
+  --seq-100:#184f95; --seq-250:#1c5cab; --seq-400:#256abf; --seq-500:#3987e5; --seq-600:#6da7ec;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 20px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size:14px; line-height:1.5;
+}
+.mono{font-family:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;}
+h1,h2,h3{font-family:"IBM Plex Sans", sans-serif; text-wrap:balance; margin:0;}
+::selection{background:var(--accent-soft);}
+a{color:inherit;}
+.wrap{max-width:1800px; margin:0 auto; padding:0 32px 64px;}
+
+/* --- header --- */
+.masthead{padding:28px 20px 0;}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--accent);
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+h1.title{font-size:26px; font-weight:700; letter-spacing:-.01em;}
+.sub{color:var(--ink-2); font-size:13px; margin-top:6px;}
+.sample-flag{
+  display:inline-flex; align-items:center; gap:6px; margin-top:12px;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  color:var(--ink-2); background:var(--surface-2); border:1px solid var(--border);
+  padding:5px 10px; border-radius:5px;
+}
+.sample-flag::before{content:"\25CF"; color:var(--good); font-size:8px;}
+
+.stripe{
+  height:5px; margin-top:20px;
+  background:repeating-linear-gradient(-45deg, var(--stripe-a) 0 10px, var(--stripe-b) 10px 20px);
+  opacity:.85;
+}
+
+/* --- KPI strip --- */
+.kpis{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1px;
+  background:var(--border); border:1px solid var(--border); border-radius:10px;
+  overflow:hidden; margin:22px 0 0;
+}
+.kpi{background:var(--surface); padding:16px 18px;}
+.kpi .lbl{font-size:11px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
+.kpi .val{font-family:"IBM Plex Mono",monospace; font-size:22px; font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums;}
+.kpi .foot{font-size:11.5px; color:var(--ink-2); margin-top:4px;}
+
+/* --- nav --- */
+.navbar{
+  position:sticky; top:0; z-index:20; margin-top:22px;
+  background:color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter:blur(8px); border-bottom:1px solid var(--border);
+  padding:10px 20px;
+}
+.navbar .row{max-width:1800px; margin:0 auto; display:flex; flex-wrap:nowrap; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-padding-inline:12px;}
+.navlink{
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; font-weight:600;
+  padding:9px 14px; border-radius:6px; text-decoration:none; white-space:nowrap;
+  color:var(--ink-2); border:1px solid transparent;
+}
+.navlink .n{color:var(--accent); margin-right:6px;}
+.navlink:nth-child(even){color:var(--accent);}
+.navlink:hover{background:var(--surface-2); border-color:var(--border);}
+
+/* --- cards --- */
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:22px; margin-top:18px; box-shadow:var(--shadow); scroll-margin-top:70px;
+}
+.card h2{font-size:16px; font-weight:600; display:flex; align-items:baseline; gap:9px;}
+.card h2 .code{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--accent); font-weight:700;}
+.card p.note{color:var(--ink-2); font-size:12.5px; margin:6px 0 16px; max-width:68ch;}
+.card h3{font-size:12.5px; font-weight:600; color:var(--ink-2); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;}
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+@media (max-width:720px){.grid-2{grid-template-columns:1fr;}}
+.chart-box{position:relative; height:230px;}
+.chart-box.tall{height:280px;}
+.chart-box.wide{height:170px;}
+
+/* --- tables --- */
+.tblwrap{overflow-x:auto;}
+table{border-collapse:collapse; width:100%; font-size:12.5px;}
+th{
+  text-align:left; padding:8px 10px; color:var(--ink-2); font-weight:600;
+  font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+  border-bottom:1px solid var(--grid); position:sticky; top:0; background:var(--surface);
+}
+td{padding:7px 10px; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums;}
+tbody tr:hover td{background:var(--surface-2);}
+.scroll{max-height:420px; overflow-y:auto; border:1px solid var(--grid); border-radius:8px;}
+.scroll table th{top:-1px;}
+.pos{color:var(--good); font-weight:600;}
+.neg{color:var(--critical); font-weight:600;}
+.chip{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:20px;}
+.chip.pos{background:rgba(12,163,12,.12); color:var(--good);}
+.chip.neg{background:rgba(208,59,59,.12); color:var(--critical);}
+.bar-cell{position:relative;}
+.bar-cell .fill{position:absolute; inset:2px 2px 2px 2px; background:var(--series-1-soft); border-radius:3px; z-index:0;}
+.bar-cell span{position:relative; z-index:1;}
+
+/* --- controls --- */
+input#buscar{
+  font-family:"IBM Plex Mono",monospace; padding:8px 12px; font-size:12.5px; width:220px;
+  border:1px solid var(--border); border-radius:6px; background:var(--surface-2); color:var(--ink);
+  margin-bottom:12px;
+}
+input#buscar:focus{outline:2px solid var(--accent); outline-offset:1px;}
+.pillrow{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;}
+.pill{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:600;
+  padding:8px 14px; border-radius:20px; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--ink-2); cursor:pointer;
+}
+.pill.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.pill:focus-visible, .navlink:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+/* --- heatmap --- */
+.heat-grid{display:grid; grid-template-columns:52px repeat(24,minmax(20px,1fr)); gap:2px; font-size:9.5px;}
+.heat-grid .hh{color:var(--ink-muted); text-align:center; padding-bottom:3px; font-family:"IBM Plex Mono",monospace;}
+.heat-grid .dd{color:var(--ink-2); font-family:"IBM Plex Mono",monospace; display:flex; align-items:center; font-size:10.5px;}
+.heat-grid .cell{aspect-ratio:1; border-radius:3px; display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace;}
+.heat-scale{display:flex; align-items:center; gap:8px; margin-top:12px; font-size:11px; color:var(--ink-muted);}
+.heat-scale .ramp{width:120px; height:8px; border-radius:4px; background:linear-gradient(90deg,var(--seq-100),var(--seq-600));}
+
+.progress{height:8px; border-radius:5px; background:var(--grid); overflow:hidden; margin:10px 0;}
+.progress > div{height:100%; background:var(--accent); border-radius:5px;}
+.txt{color:var(--ink-2); font-size:12.5px; line-height:1.7;}
+.txt b{color:var(--ink); font-weight:600;}
+.statpair{display:flex; gap:28px; flex-wrap:wrap; margin-top:8px;}
+.statpair .s .v{font-family:"IBM Plex Mono",monospace; font-size:20px; font-weight:600;}
+.statpair .s .l{font-size:11.5px; color:var(--ink-muted); margin-top:2px;}
+.backlink{font-size:11.5px; color:var(--ink-muted);}
+.backlink a{color:var(--accent); text-decoration:none; font-weight:600;}
+
+footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px 20px 8px; font-family:"IBM Plex Mono",monospace;}
+
+@media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important;} html{scroll-behavior:auto;} }
+
+@media (max-width:600px){
+  .navbar .row{flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-padding-inline:12px;}
+  .wrap{padding:0 16px 48px;}
+  .card{padding:16px;}
+  .kpi{padding:12px 14px;}
+  table{font-size:11px;}
+  th, td{padding:6px 7px;}
+  .tblwrap{position:relative;}
+  .tblwrap::before{content:"Desliza para ver todo >>"; display:block; font-size:10px; color:var(--ink-muted); text-align:right; margin-bottom:4px; font-family:"IBM Plex Mono",monospace;}
+  .tblwrap::after{content:""; position:absolute; top:0; right:0; bottom:0; width:20px; background:linear-gradient(to right, transparent, var(--surface)); pointer-events:none;}
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
+</head><body>
+
+<div class="masthead">
+  <div class="eyebrow"><span class="dot"></span>SWITCH VESPUCIO 345 &middot; ESTACIONAMIENTO</div>
+  <h1 class="title">Consola de pagos &mdash; Parking</h1>
+  <div class="sub" id="subGenerado">Generado el &mdash; &middot; A&ntilde;o &mdash;</div>
+</div>
+<div class="stripe"></div>
+
+<div class="wrap">
+  <div class="kpis" id="kpiRow"></div>
+</div>
+
+<nav class="navbar"><div class="row" id="navRow"></div></nav>
+
+<div class="wrap">
+
+  <div class="card" id="sec-resumen">
+    <h2><span class="code">N&middot;01</span>Resumen mensual</h2>
+    <p class="note">Facturado y transacciones por mes, seg&uacute;n &ldquo;Fecha Creaci&oacute;n&rdquo;. T/D&iacute;a = transacciones &divide; d&iacute;as transcurridos del mes.</p>
+    <div class="grid-2">
+      <div><h3>Facturado por mes</h3><div class="chart-box"><canvas id="chartMensualMonto"></canvas></div></div>
+      <div><h3>Transacciones por mes</h3><div class="chart-box"><canvas id="chartMensualTrans"></canvas></div></div>
+    </div>
+    <div class="tblwrap" style="margin-top:18px;">
+      <table><thead><tr><th>Mes</th><th>Facturado</th><th>Transac.</th><th>T/D&iacute;a</th><th>$/Transac</th><th>Estad&iacute;a prom.</th><th>&Delta; T/D&iacute;a</th><th>&Delta; $/T</th></tr></thead>
+      <tbody id="tbodyMensual"></tbody></table>
+    </div>
+  </div>
+
+  <div class="card" id="sec-proyeccion">
+    <h2><span class="code">N&middot;02</span>Proyecci&oacute;n fin de mes</h2>
+    <div id="proyeccionTxt" class="txt"></div>
+    <div class="progress"><div id="proyeccionBar"></div></div>
+  </div>
+
+  <div class="card" id="sec-promedio-dia">
+    <h2><span class="code">N&middot;03</span>Promedio por d&iacute;a de semana</h2>
+    <p class="note">Promedio de monto y transacciones por d&iacute;a de semana, calculado con los d&iacute;as del mes seleccionado.</p>
+    <div class="pillrow" id="mesButtons"></div>
+    <div class="chart-box"><canvas id="chartDiaSemana"></canvas></div>
+    <div class="tblwrap" style="margin-top:16px;">
+      <table><thead><tr><th>D&iacute;a</th><th>Prom. monto</th><th>Prom. #</th><th>Prom. $/Transac</th></tr></thead>
+      <tbody id="tbodyDiaSemana"></tbody></table>
+    </div>
+  </div>
+
+  <div class="card" id="sec-historial">
+    <h2><span class="code">N&middot;04</span>Historial diario</h2>
+    <p class="note">Facturado por d&iacute;a. Filtra por semana, mes o un rango de fechas.</p>
+    <div id="histFiltro"></div>
+    <div class="chart-box wide"><canvas id="chartHistorial"></canvas></div>
+    <input id="buscar" placeholder="Buscar fecha (dd/mm/aaaa)&hellip;" style="margin-top:16px;">
+    <div class="scroll"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th><th>#</th><th>$/Transac</th></tr></thead>
+    <tbody id="tbodyDiario"></tbody></table></div>
+  </div>
+
+  <div class="card" id="sec-horapico">
+    <h2><span class="code">N&middot;05</span>Hora pico</h2>
+    <p class="note" style="margin-bottom:6px;">Mostrando: <b id="horaPicoLabel">A&ntilde;o completo</b></p>
+    <div id="horaPicoFiltro"></div>
+    <div class="grid-2">
+      <div><h3>Hora del pago</h3><p class="note" style="margin:0 0 10px;">Momento del cobro seg&uacute;n &ldquo;Fecha Creaci&oacute;n&rdquo;.</p><div class="chart-box"><canvas id="chartHoraPico"></canvas></div></div>
+      <div><h3>Ocupaci&oacute;n estimada</h3><p class="note" style="margin:0 0 10px;">Asume pago al salir; los pagos con tarifa m&aacute;xima usan una duraci&oacute;n m&iacute;nima estimada, ya que su duraci&oacute;n real no se puede calcular exacta.</p><div class="chart-box"><canvas id="chartHoraPicoOcup"></canvas></div></div>
+    </div>
+    <div class="scroll" style="max-height:220px;margin-top:16px;">
+      <table><thead><tr><th>Hora</th><th>Pagos</th><th>Ocupaci&oacute;n (est.)</th></tr></thead>
+      <tbody id="tbodyHoraPico"></tbody></table>
+    </div>
+  </div>
+
+  <div class="card" id="sec-distribucion">
+    <h2><span class="code">N&middot;06</span>Distribuci&oacute;n de montos</h2>
+    <p class="note">Cantidad de pagos agrupados por rango de monto. Color = intensidad del rango (m&aacute;s oscuro = monto m&aacute;s alto).</p>
+    <p class="note" style="margin-bottom:6px;">Mostrando: <b id="distribLabel">A&ntilde;o completo</b></p>
+    <div id="distribFiltro"></div>
+    <div class="chart-box tall"><canvas id="chartBuckets"></canvas></div>
+    <p class="note" id="bucketsEquivNote" style="margin-top:10px;margin-bottom:0;"></p>
+    <div class="tblwrap" style="margin-top:12px;">
+      <table><thead><tr><th>Rango</th><th>Cantidad</th><th>%</th></tr></thead><tbody id="tbodyBuckets"></tbody></table>
+    </div>
+  </div>
+
+  <div class="card" id="sec-ranking">
+    <h2><span class="code">N&middot;07</span>Ranking de d&iacute;as</h2>
+    <p class="note">Los 10 d&iacute;as con mayor y menor recaudaci&oacute;n del a&ntilde;o.</p>
+    <div class="grid-2">
+      <div><h3>Mejores 10</h3><div class="tblwrap"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th></tr></thead><tbody id="tbodyMejores"></tbody></table></div></div>
+      <div><h3>Peores 10</h3><div class="tblwrap"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th></tr></thead><tbody id="tbodyPeores"></tbody></table></div></div>
+    </div>
+    <p class="note" style="margin-top:12px;margin-bottom:0;">El aviso &ldquo;&#9888; revisar&rdquo; en un d&iacute;a significa que sus transacciones fueron muy inferiores a lo t&iacute;pico para ese d&iacute;a de la semana &mdash; puede ser un d&iacute;a real flojo, o una sincronizaci&oacute;n incompleta con ParkingApp. Conviene revisarlo manualmente.</p>
+  </div>
+
+  <div class="card" id="sec-heatmap">
+    <h2><span class="code">N&middot;08</span>Mapa de calor &mdash; hora &times; d&iacute;a</h2>
+    <p class="note">Cruce de hora del pago con d&iacute;a de semana, a&ntilde;o completo.</p>
+    <div class="tblwrap"><div id="heatmapReal"></div></div>
+  </div>
+
+  <div class="card" id="sec-heatmap-ocupacion">
+    <h2><span class="code">N&middot;09</span>Mapa de calor &mdash; ocupaci&oacute;n</h2>
+    <p class="note">Misma estimaci&oacute;n de ocupaci&oacute;n que N&middot;05.</p>
+    <div class="tblwrap"><div id="heatmapOcup"></div></div>
+  </div>
+
+  <div class="card" id="sec-tendencia">
+    <h2><span class="code">N&middot;10</span>Tendencia semanal</h2>
+    <p class="note">Compara las dos &uacute;ltimas semanas completas (lunes a domingo). Excluye la semana en curso.</p>
+    <div id="tendenciaContainer"></div>
+  </div>
+
+  <footer>SWITCH 345 &middot; PARKING REPORT &middot; v2</footer>
+</div>
+
+<script>
+{{DATOS_JS}}
+
+const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 11;
+Chart.defaults.animation = reduceMotion ? false : {duration:280};
+
+function fmtCLP(n){return '$' + Math.round(n).toLocaleString('es-CL');}
+function fmtPct(n){var s=(n*100).toFixed(1)+'%'; return (n>=0?'+':'')+s;}
+
+function calcProyeccionPonderada(){
+  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var sum={}, cnt={}; dias.forEach(function(d){sum[d]=0;cnt[d]=0;});
+  daily.forEach(function(d){sum[d.dia]+=d.monto; cnt[d.dia]++;});
+  var avg={}; dias.forEach(function(d){avg[d]=cnt[d]>0?sum[d]/cnt[d]:0;});
+  var hoy=new Date(); var restante=0;
+  for(var dd=diasTranscurridosMesActual+1; dd<=diasTotalesMesActual; dd++){
+    var f=new Date(hoy.getFullYear(),hoy.getMonth(),dd); restante+=avg[dias[f.getDay()]];
+  }
+  return cobradoMesActual+restante;
+}
+const proyeccionPonderada = calcProyeccionPonderada();
+
+document.getElementById('subGenerado').textContent =
+  'Generado el ' + new Date().toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'}) +
+  ' ' + new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) + ' · Año ' + currentYear;
+
+/* ---------- nav ---------- */
+const SECTIONS = [
+  ['01','sec-resumen','Resumen mensual'], ['02','sec-proyeccion','Proyección'],
+  ['03','sec-promedio-dia','Prom. día semana'], ['04','sec-historial','Historial diario'],
+  ['05','sec-horapico','Hora pico'], ['06','sec-distribucion','Distribución'],
+  ['07','sec-ranking','Ranking días'],
+  ['08','sec-heatmap','Mapa de calor'], ['09','sec-heatmap-ocupacion','Mapa (ocup.)'],
+  ['10','sec-tendencia','Tendencia'],
+];
+document.getElementById('navRow').innerHTML = SECTIONS.map(function(s){
+  return '<a class="navlink" href="#'+s[1]+'"><span class="n">'+s[0]+'</span>'+s[2]+'</a>';
+}).join('');
+
+/* ---------- KPI strip ---------- */
+const totalCobradoAnio = monthly.reduce(function(a,m){return a+m.cobrado;},0);
+let kpiRecaudadoFoot = totalTransAnio.toLocaleString('es-CL')+' transacciones';
+if(totalTransAnioAnterior>0 && totalCobradoAnioAnterior>0){
+  var deltaAnio = (totalCobradoAnio/totalCobradoAnioAnterior-1)*100;
+  kpiRecaudadoFoot += ' · <span style="color:'+(deltaAnio>=0?'var(--good)':'var(--critical)')+';font-weight:600;">'+(deltaAnio>=0?'&#9650;':'&#9660;')+' '+(deltaAnio>=0?'+':'')+deltaAnio.toFixed(1)+'% vs mismo período '+(currentYear-1)+'</span>';
+}
+document.getElementById('kpiRow').innerHTML = [
+  {l:'Recaudado '+currentYear, v:fmtCLP(totalCobradoAnio), f:kpiRecaudadoFoot},
+  {l:'Recaudado '+nombreMesActual, v:fmtCLP(cobradoMesActual), f:'día '+diasTranscurridosMesActual+' de '+diasTotalesMesActual},
+  {l:'Proyección lineal '+nombreMesActual, v:fmtCLP(proyeccionMesActual), f:'ritmo lineal'},
+  {l:'Proyección ponderada '+nombreMesActual, v:fmtCLP(proyeccionPonderada), f:'por día de semana'},
+  {l:'Estadía promedio', v:estadiaProm.toFixed(0)+' min', f:'&asymp; '+(estadiaProm/60).toFixed(1)+' h · excluye tarifa máxima'},
+].map(function(k){
+  return '<div class="kpi"><div class="lbl">'+k.l+'</div><div class="val">'+k.v+'</div><div class="foot">'+k.f+'</div></div>';
+}).join('');
+
+/* ---------- chart helpers ---------- */
+function baseGrid(){
+  return {color:cssVar('--grid'), drawTicks:false};
+}
+function baseScales(xTicks, yTicks){
+  return {
+    x:{grid:{display:false}, ticks:Object.assign({color:cssVar('--ink-muted')}, xTicks||{})},
+    y:{grid:baseGrid(), border:{display:false}, ticks:Object.assign({color:cssVar('--ink-muted')}, yTicks||{}), beginAtZero:true},
+  };
+}
+function barChart(ctx, labels, values, opts){
+  opts = opts || {};
+  return new Chart(ctx, {
+    type:'bar',
+    data:{labels:labels, datasets:[{
+      data:values,
+      backgroundColor: opts.colors || cssVar('--series-1'),
+      borderRadius:4, borderSkipped:false, maxBarThickness:opts.thick || 34,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation: opts.noAnim ? false : undefined,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: opts.tooltipLabel || function(c){return c.formattedValue;}}}},
+      scales: opts.scales || baseScales(),
+    }
+  });
+}
+
+/* ---------- N-01 resumen mensual ---------- */
+const mesesActivos = monthly.filter(function(m,i){return m.transacciones>0 || i<=new Date().getMonth();});
+barChart(document.getElementById('chartMensualMonto'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
+  mesesActivos.map(function(m){return m.cobrado;}),
+  {tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
+barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
+  mesesActivos.map(function(m){return m.transacciones;}),
+  {colors:cssVar('--accent')});
+
+(function renderMensualTabla(){
+  var tb = document.getElementById('tbodyMensual');
+  monthly.forEach(function(m,i){
+    if(m.transacciones===0 && i>new Date().getMonth()) return;
+    var claseT = m.deltaTdia>=0?'pos':'neg', claseM = m.deltaMontoTransac>=0?'pos':'neg';
+    var dT = i===0?'&mdash;':fmtPct(m.deltaTdia), dM = i===0?'&mdash;':fmtPct(m.deltaMontoTransac);
+    var badge = m.cambioTarifa ? ' <span class="chip pos" title="La tarifa por minuto cambió este mes — parte de la variación en $/Transac puede deberse al precio, no al comportamiento de los clientes.">&#9889; tarifa</span>' : '';
+    tb.innerHTML += '<tr><td>'+m.nombre+badge+'</td><td>'+fmtCLP(m.cobrado)+'</td><td>'+m.transacciones+
+      '</td><td>'+m.tdia.toFixed(1)+'</td><td>'+fmtCLP(m.montoTransac)+
+      '</td><td>'+(m.estadiaProm>0?m.estadiaProm.toFixed(0)+' min':'&mdash;')+
+      '</td><td class="'+claseT+'">'+dT+'</td><td class="'+claseM+'">'+dM+'</td></tr>';
+  });
+})();
+
+/* ---------- N-02 proyeccion ---------- */
+(function(){
+  document.getElementById('proyeccionTxt').innerHTML =
+    '<ul style="margin:4px 0 0 18px;padding:0;list-style:disc;">'+
+    '<li style="margin-bottom:4px;">Recaudado en <b>'+nombreMesActual+'</b> hasta el día '+diasTranscurridosMesActual+' de '+diasTotalesMesActual+': <b>'+fmtCLP(cobradoMesActual)+'</b></li>'+
+    '<li style="margin-bottom:4px;">Proyección lineal simple: <b>'+fmtCLP(proyeccionMesActual)+'</b></li>'+
+    '<li>Proyección ponderada por día de semana: <b>'+fmtCLP(proyeccionPonderada)+'</b></li>'+
+    '</ul>'+
+    '<span style="display:block;margin-top:8px;color:var(--ink-muted);font-size:11.5px;">La ponderada usa el promedio histórico de cada día de semana para estimar lo que falta del mes.</span>';
+  document.getElementById('proyeccionBar').style.width = Math.min(100, diasTranscurridosMesActual/diasTotalesMesActual*100)+'%';
+})();
+
+/* ---------- N-03 dia semana ---------- */
+let chartDiaSemana = null;
+function renderDiaSemana(mes){
+  var dias=['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+  var agg={}; dias.forEach(function(d){agg[d]={monto:0,trans:0,count:0};});
+  daily.filter(function(d){return d.mes===mes;}).forEach(function(d){
+    agg[d.dia].monto+=d.monto; agg[d.dia].trans+=d.transacciones; agg[d.dia].count++;
+  });
+  var tb=document.getElementById('tbodyDiaSemana'); tb.innerHTML='';
+  var promMontos=[];
+  dias.forEach(function(d){
+    var a=agg[d]; var pm=a.count>0?a.monto/a.count:0, pt=a.count>0?a.trans/a.count:0, pmt=a.trans>0?a.monto/a.trans:0;
+    promMontos.push(pm);
+    tb.innerHTML+='<tr><td>'+d.charAt(0).toUpperCase()+d.slice(1)+'</td><td>'+fmtCLP(pm)+'</td><td>'+pt.toFixed(1)+'</td><td>'+fmtCLP(pmt)+'</td></tr>';
+  });
+  var labels = dias.map(function(d){return d.slice(0,3);});
+  if(chartDiaSemana){ chartDiaSemana.data.datasets[0].data = promMontos; chartDiaSemana.update(); }
+  else { chartDiaSemana = barChart(document.getElementById('chartDiaSemana'), labels, promMontos, {tooltipLabel:function(c){return fmtCLP(c.parsed.y);}}); }
+}
+(function poblarSelectMes(){
+  var cont=document.getElementById('mesButtons');
+  var mesesConDatos=[...new Set(daily.map(function(d){return d.mes;}))].sort(function(a,b){return a-b;});
+  var mesActivo = mesesConDatos.length? mesesConDatos[mesesConDatos.length-1] : null;
+  function pintar(){
+    cont.innerHTML='';
+    mesesConDatos.forEach(function(m){
+      var b=document.createElement('button');
+      b.className='pill'+(m===mesActivo?' active':'');
+      b.textContent=monthly[m-1].nombre;
+      b.addEventListener('click', function(){ mesActivo=m; pintar(); renderDiaSemana(m); });
+      cont.appendChild(b);
+    });
+  }
+  pintar();
+  if(mesActivo!==null) renderDiaSemana(mesActivo);
+})();
+
+/* ---------- filtro de fechas (compartido por N-04, N-05, N-06) ---------- */
+function fechaToISO(f){var p=f.split('/'); return p[2]+'-'+p[1]+'-'+p[0];}
+function buildDateFilter(containerId, onChange){
+  var cont = document.getElementById(containerId);
+  if(!daily.length){ cont.innerHTML=''; onChange(daily, 'Año completo'); return; }
+  var sorted = daily.slice().reverse();
+  var minISO = fechaToISO(sorted[0].fecha), maxISO = fechaToISO(sorted[sorted.length-1].fecha);
+  cont.innerHTML =
+    '<div class="pillrow" style="margin-bottom:8px;">'+
+    '<button type="button" class="pill active" data-p="anio">Año completo</button>'+
+    '<button type="button" class="pill" data-p="mes">Este mes</button>'+
+    '<button type="button" class="pill" data-p="semana">Esta semana</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">'+
+    '<label style="font-size:11.5px;color:var(--ink-2);">Desde <input type="date" class="f-desde" min="'+minISO+'" max="'+maxISO+'"></label>'+
+    '<label style="font-size:11.5px;color:var(--ink-2);">Hasta <input type="date" class="f-hasta" min="'+minISO+'" max="'+maxISO+'"></label>'+
+    '</div>';
+  var pills = cont.querySelectorAll('.pill');
+  var iDesde = cont.querySelector('.f-desde'), iHasta = cont.querySelector('.f-hasta');
+  function aplicar(desdeISO, hastaISO, label){
+    var filtered = sorted.filter(function(d){
+      var iso = fechaToISO(d.fecha);
+      return (!desdeISO || iso>=desdeISO) && (!hastaISO || iso<=hastaISO);
+    });
+    onChange(filtered.slice().reverse(), label);
+  }
+  pills.forEach(function(b){
+    b.addEventListener('click', function(){
+      pills.forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+      var hoy = new Date();
+      if(b.dataset.p==='anio'){ iDesde.value=''; iHasta.value=''; aplicar(null,null,'Año completo'); }
+      else if(b.dataset.p==='mes'){
+        var d1 = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        var iso1 = d1.toISOString().slice(0,10), iso2 = hoy.toISOString().slice(0,10);
+        iDesde.value = iso1; iHasta.value = iso2;
+        aplicar(iso1, iso2, 'Este mes');
+      } else {
+        var day = hoy.getDay(); var diff=(day===0?-6:1-day);
+        var monday = new Date(hoy); monday.setDate(hoy.getDate()+diff);
+        var iso1 = monday.toISOString().slice(0,10), iso2 = hoy.toISOString().slice(0,10);
+        iDesde.value = iso1; iHasta.value = iso2;
+        aplicar(iso1, iso2, 'Esta semana');
+      }
+    });
+  });
+  [iDesde, iHasta].forEach(function(inp){
+    inp.addEventListener('change', function(){
+      pills.forEach(function(x){x.classList.remove('active');});
+      var d1 = iDesde.value||null, d2 = iHasta.value||null;
+      var lbl = (d1?d1.split('-').reverse().join('/'):'inicio')+' – '+(d2?d2.split('-').reverse().join('/'):'hoy');
+      aplicar(d1, d2, lbl);
+    });
+  });
+}
+
+/* ---------- N-04 historial ---------- */
+var historialChart = null;
+var historialData = daily.slice();
+function renderHistorialChart(dataDesc){
+  var chrono = dataDesc.slice().reverse();
+  var labels = chrono.map(function(d){return d.fecha;});
+  var values = chrono.map(function(d){return d.monto;});
+  var scalesX = chrono.length > 40
+    ? {grid:{display:false}, ticks:{color:cssVar('--ink-muted'), autoSkip:false, maxRotation:0, callback:function(v,i){var lbl=chrono[i].fecha; return lbl.slice(0,2)==='01' ? lbl.slice(3) : '';}}}
+    : {grid:{display:false}, ticks:{color:cssVar('--ink-muted'), autoSkip:true, maxTicksLimit:12}};
+  requestAnimationFrame(function(){
+    if(historialChart){ historialChart.destroy(); historialChart = null; }
+    var ctx = document.getElementById('chartHistorial');
+    historialChart = new Chart(ctx,{
+      type:'line',
+      data:{labels:labels, datasets:[{
+        data:values,
+        borderColor:cssVar('--series-1'), backgroundColor:cssVar('--series-1-soft'),
+        fill:true, pointRadius:0, borderWidth:1.5, tension:.15,
+      }]},
+      options:{responsive:true, maintainAspectRatio:false, animation:false,
+        plugins:{legend:{display:false}, tooltip:{callbacks:{
+          title:function(items){return chrono[items[0].dataIndex].fecha + ' · ' + chrono[items[0].dataIndex].dia;},
+          label:function(c){return fmtCLP(c.parsed.y)+' ('+chrono[c.dataIndex].transacciones+' transac.)';}
+        }}},
+        scales:{x:scalesX,
+                 y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted'), callback:function(v){return fmtCLP(v);}}}},
+      }
+    });
+  });
+}
+function renderDiario(filtro){
+  var tb=document.getElementById('tbodyDiario'); tb.innerHTML='';
+  historialData.filter(function(d){return !filtro||d.fecha.indexOf(filtro)!==-1;}).slice().reverse().forEach(function(d){
+    tb.innerHTML+='<tr><td>'+d.fecha+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td></tr>';
+  });
+}
+renderDiario('');
+renderHistorialChart(historialData);
+document.getElementById('buscar').addEventListener('input', function(e){renderDiario(e.target.value);});
+buildDateFilter('histFiltro', function(filtered){
+  historialData = filtered;
+  renderDiario(document.getElementById('buscar').value);
+  renderHistorialChart(filtered);
+});
+
+/* ---------- N-05 hora pico ---------- */
+var chartHP = null, chartHPO = null;
+function sumarHoras(dataArr, campo){
+  var out = new Array(24).fill(0);
+  dataArr.forEach(function(d){ (d[campo]||[]).forEach(function(v,h){ out[h]+=v; }); });
+  return out;
+}
+function renderHoraPico(dataArr, label){
+  var horasArr = sumarHoras(dataArr, 'horas');
+  var horasOcupArr = sumarHoras(dataArr, 'horasOcup');
+  var xLabels = horasArr.map(function(v,h){return h+'h';});
+
+  var tb = document.getElementById('tbodyHoraPico'); tb.innerHTML='';
+  horasArr.forEach(function(v,h){
+    tb.innerHTML += '<tr><td>'+h+':00</td><td>'+v+'</td><td>'+horasOcupArr[h]+'</td></tr>';
+  });
+  document.getElementById('horaPicoLabel').textContent = label;
+
+  requestAnimationFrame(function(){
+    if(chartHP){ chartHP.destroy(); chartHP = null; }
+    if(chartHPO){ chartHPO.destroy(); chartHPO = null; }
+    chartHP = barChart(document.getElementById('chartHoraPico'), xLabels, horasArr, {thick:16, noAnim:true, scales:{
+      x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
+      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Cantidad de pagos', color:cssVar('--ink-muted'), font:{size:10}}},
+    }});
+    chartHPO = barChart(document.getElementById('chartHoraPicoOcup'), xLabels, horasOcupArr, {thick:16, colors:cssVar('--accent'), noAnim:true, scales:{
+      x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
+      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Ocupación estimada (autos·hora)', color:cssVar('--ink-muted'), font:{size:9}}},
+    }});
+  });
+}
+renderHoraPico(daily, 'Año completo');
+buildDateFilter('horaPicoFiltro', function(filtered, label){ renderHoraPico(filtered, label); });
+
+/* ---------- N-06 distribucion ---------- */
+var chartBuckets = null;
+var bucketLabelsFull = buckets.map(function(b){return b.rango;});
+var bucketShortLabels = ['<$1.000','$1-2k','$2-3k','$3-5k','$5-10k','$10-15k','$15k+ (tope)'];
+var bucketRamp = ['--seq-100','--seq-250','--seq-400','--seq-500','--seq-500','--seq-600','--seq-600'].map(cssVar);
+function sumarBuckets(dataArr){
+  var out = new Array(7).fill(0);
+  dataArr.forEach(function(d){ (d.buckets||[]).forEach(function(v,i){ out[i]+=v; }); });
+  return out;
+}
+function renderDistribucion(dataArr, label){
+  var counts = sumarBuckets(dataArr);
+  var total = counts.reduce(function(a,b){return a+b;},0);
+
+  var tb = document.getElementById('tbodyBuckets'); tb.innerHTML='';
+  counts.forEach(function(c,i){
+    var pct = total>0 ? (c/total*100).toFixed(1) : '0';
+    tb.innerHTML += '<tr><td>'+bucketLabelsFull[i]+'</td><td>'+c+'</td><td>'+pct+'%</td></tr>';
+  });
+  document.getElementById('distribLabel').textContent = label;
+  if(tarifaMinActual>0){
+    var cuts=[1000,2000,3000,5000,10000,15000];
+    var mins=cuts.map(function(c){return Math.round(c/tarifaMinActual);});
+    document.getElementById('bucketsEquivNote').innerHTML =
+      'A la tarifa actual ('+tarifaMinActual+' CLP/min), esos cortes equivalen aprox. a '+mins.join(', ')+' minutos. '+
+      'Como la tarifa sube con el tiempo, esta equivalencia se corre — los rangos en pesos no se ajustan solos.';
+  }
+
+  requestAnimationFrame(function(){
+    if(chartBuckets){ chartBuckets.destroy(); chartBuckets = null; }
+    chartBuckets = barChart(document.getElementById('chartBuckets'), bucketShortLabels, counts,
+      {colors:bucketRamp, thick:44, noAnim:true, tooltipLabel:function(c){
+        var pct = total>0 ? (c.parsed.y/total*100).toFixed(1) : '0';
+        return bucketLabelsFull[c.dataIndex]+': '+c.parsed.y+' ('+pct+'%)';
+      }, scales:{
+        x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}},
+        y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true},
+      }});
+  });
+}
+renderDistribucion(daily, 'Año completo');
+buildDateFilter('distribFiltro', function(filtered, label){ renderDistribucion(filtered, label); });
+
+/* ---------- N-07 ranking ---------- */
+(function(){
+  function median(arr){ var s=arr.slice().sort(function(a,b){return a-b;}); var mid=Math.floor(s.length/2); return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2; }
+  var porDia = {};
+  daily.forEach(function(d){ (porDia[d.dia] = porDia[d.dia]||[]).push(d.transacciones); });
+  var medianaDia = {};
+  Object.keys(porDia).forEach(function(k){ medianaDia[k]=median(porDia[k]); });
+
+  var sorted=daily.slice().sort(function(a,b){return b.monto-a.monto;});
+  var top=sorted.slice(0,10), bottom=sorted.slice(-10).reverse();
+  var maxV = top.length? top[0].monto : 1;
+  function rows(list, tb){
+    list.forEach(function(d){
+      var pct = maxV>0 ? Math.max(4,(d.monto/maxV*100)) : 0;
+      var med = medianaDia[d.dia] || 0;
+      var sospechoso = med>0 && d.transacciones < med*0.3;
+      var flag = sospechoso ? ' <span class="chip neg" title="Transacciones muy por debajo de lo típico para un '+d.dia+' ('+d.transacciones+' vs mediana '+med.toFixed(0)+'). Podría ser un día flojo real, o una sincronización incompleta con ParkingApp.">&#9888; revisar</span>' : '';
+      tb.innerHTML += '<tr><td>'+d.fecha+'</td><td>'+d.dia+flag+'</td><td class="bar-cell"><div class="fill" style="width:'+pct+'%;"></div><span>'+fmtCLP(d.monto)+'</span></td></tr>';
+    });
+  }
+  rows(top, document.getElementById('tbodyMejores'));
+  rows(bottom, document.getElementById('tbodyPeores'));
+})();
+
+/* ---------- N-08/09 heatmaps ---------- */
+function renderHeatmap(data, containerId, isOcup){
+  var dias=['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+  var max=0; data.forEach(function(row){row.forEach(function(v){if(v>max)max=v;});});
+  var html='<div class="heat-grid"><div></div>';
+  for(var h=0;h<24;h++) html+='<div class="hh">'+h+'</div>';
+  data.forEach(function(row,i){
+    html+='<div class="dd">'+dias[i].slice(0,3)+'</div>';
+    row.forEach(function(v,h2){
+      var alpha = max>0? (v/max) : 0;
+      var mixPct = Math.round(alpha*90+8);
+      var bg = 'color-mix(in srgb, var(--seq-500) '+mixPct+'%, var(--surface))';
+      var fg = mixPct>=50 ? '#fff' : 'var(--ink)';
+      html+='<div class="cell" title="'+dias[i]+' '+h2+':00 – '+v+(isOcup?' ocupadas (est.)':' pagos')+'" style="background:'+bg+';color:'+fg+';">'+(v>0&&alpha>0.35?v:'')+'</div>';
+    });
+  });
+  html+='</div><div class="heat-scale"><span>menos</span><div class="ramp"></div><span>más</span></div>';
+  document.getElementById(containerId).innerHTML = html;
+}
+renderHeatmap(heatmapData, 'heatmapReal', false);
+renderHeatmap(occupancyHeatmapData, 'heatmapOcup', true);
+
+/* ---------- N-10 tendencia ---------- */
+(function(){
+  function parseF(f){var p=f.split('/'); return new Date(+p[2],+p[1]-1,+p[0]);}
+  function monday(dt){var day=dt.getDay(); var diff=(day===0?-6:1-day); var m=new Date(dt); m.setDate(dt.getDate()+diff); m.setHours(0,0,0,0); return m;}
+  var weeks={};
+  daily.forEach(function(d){
+    var key=monday(parseF(d.fecha)).getTime();
+    if(!weeks[key]) weeks[key]={monto:0,trans:0};
+    weeks[key].monto+=d.monto; weeks[key].trans+=d.transacciones;
+  });
+  var keys=Object.keys(weeks).map(Number).sort(function(a,b){return b-a;});
+  var mondayHoy=monday(new Date()).getTime();
+  keys=keys.filter(function(k){return k!==mondayHoy;});
+  var cont=document.getElementById('tendenciaContainer');
+  if(keys.length<2){ cont.innerHTML='<p class="txt">No hay suficientes semanas completas para comparar.</p>'; return; }
+  var actual=weeks[keys[0]], anterior=weeks[keys[1]];
+  var dM = anterior.monto>0 ? ((actual.monto/anterior.monto-1)*100) : 0;
+  var dT = anterior.trans>0 ? ((actual.trans/anterior.trans-1)*100) : 0;
+  cont.innerHTML =
+    '<div class="grid-2">'+
+    '<div><h3>Facturado</h3><div class="chart-box wide"><canvas id="chartTendMonto"></canvas></div>'+
+    '<div class="chip '+(dM>=0?'pos':'neg')+'" style="margin-top:10px;">'+(dM>=0?'&#9650;':'&#9660;')+' '+(dM>=0?'+':'')+dM.toFixed(1)+'% vs semana anterior</div></div>'+
+    '<div><h3>Transacciones</h3><div class="chart-box wide"><canvas id="chartTendTrans"></canvas></div>'+
+    '<div class="chip '+(dT>=0?'pos':'neg')+'" style="margin-top:10px;">'+(dT>=0?'&#9650;':'&#9660;')+' '+(dT>=0?'+':'')+dT.toFixed(1)+'% vs semana anterior</div></div>'+
+    '</div>';
+  var labels=['Semana anterior','Semana actual'];
+  barChart(document.getElementById('chartTendMonto'), labels, [anterior.monto, actual.monto],
+    {colors:[cssVar('--baseline'), cssVar('--accent')], thick:56, tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
+  barChart(document.getElementById('chartTendTrans'), labels, [anterior.trans, actual.trans],
+    {colors:[cssVar('--baseline'), cssVar('--series-1')], thick:56});
+})();
+</script>
+
+</body></html>
