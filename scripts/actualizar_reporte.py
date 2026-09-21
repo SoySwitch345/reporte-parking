@@ -137,6 +137,11 @@ def login(session: requests.Session, email: str, password: str) -> bool:
         headers={**login_headers, "Referer": f"{BASE_URL}/ingresar"},
         timeout=30,
     )
+    print(
+        f"[DEBUG-TEMP] login POST status={r2.status_code} final_url={r2.url} "
+        f"redirects={len(r2.history)} cookies={sorted(session.cookies.keys())}",
+        file=sys.stderr,
+    )
     body = r2.text
     # Mismo criterio que el VBA: si la respuesta vuelve a traer el formulario
     # de sesion, el login fallo.
@@ -170,6 +175,13 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
         if r.status_code != 200:
             raise RuntimeError(f"ParkingApp respondio {r.status_code} en la pagina {page}")
         data = r.json()
+        if page == 1:
+            print(
+                f"[DEBUG-TEMP] pagos.json page=1 keys={list(data.keys())} "
+                f"collection_len={len(data.get('collection') or [])} "
+                f"next_page={data.get('next_page')} body_head={r.text[:200]!r}",
+                file=sys.stderr,
+            )
         records.extend(data.get("collection") or [])
         if data.get("next_page") is None:
             break
