@@ -569,7 +569,7 @@ function renderHistorialChart(dataDesc){
 }
 function renderDiario(filtro){
   var tb=document.getElementById('tbodyDiario'); tb.innerHTML='';
-  historialData.filter(function(d){return !filtro||d.fecha.indexOf(filtro)!==-1;}).slice().reverse().forEach(function(d){
+  historialData.filter(function(d){return !filtro||d.fecha.indexOf(filtro)!==-1;}).forEach(function(d){
     tb.innerHTML+='<tr><td>'+d.fecha+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td></tr>';
   });
 }
