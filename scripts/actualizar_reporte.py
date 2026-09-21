@@ -110,7 +110,14 @@ def weekday_es(d: date) -> str:
 # ---------------------------------------------------------------------------
 
 def login(session: requests.Session, email: str, password: str) -> bool:
-    r = session.get(f"{BASE_URL}/ingresar", headers=HEADERS, timeout=30)
+    # El login (GET /ingresar y POST /sesiones) es HTML, no JSON: con
+    # Accept: application/json (el header que usa el resto del script para
+    # /pagos.json) ParkingApp responde 406 y nunca llega a ver el formulario
+    # ni las credenciales. Estas dos requests necesitan su propio Accept.
+    login_headers = {**HEADERS, "Accept": "text/html"}
+    del login_headers["X-Requested-With"]
+
+    r = session.get(f"{BASE_URL}/ingresar", headers=login_headers, timeout=30)
     if r.status_code != 200:
         return False
     m = re.search(r'name="authenticity_token"\s+value="([^"]+)"', r.text)
@@ -127,7 +134,7 @@ def login(session: requests.Session, email: str, password: str) -> bool:
     r2 = session.post(
         f"{BASE_URL}/sesiones",
         data=payload,
-        headers={**HEADERS, "Referer": f"{BASE_URL}/ingresar"},
+        headers={**login_headers, "Referer": f"{BASE_URL}/ingresar"},
         timeout=30,
     )
     body = r2.text
