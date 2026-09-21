@@ -175,11 +175,11 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
         if r.status_code != 200:
             raise RuntimeError(f"ParkingApp respondio {r.status_code} en la pagina {page}")
         data = r.json()
-        if page == 1:
+        if page <= 2:
             print(
-                f"[DEBUG-TEMP] pagos.json page=1 keys={list(data.keys())} "
+                f"[DEBUG-TEMP] pagos.json page={page} keys={list(data.keys())} "
                 f"collection_len={len(data.get('collection') or [])} "
-                f"next_page={data.get('next_page')} body_head={r.text[:200]!r}",
+                f"next_page={data.get('next_page')} pagination={data.get('pagination')!r}",
                 file=sys.stderr,
             )
         records.extend(data.get("collection") or [])
