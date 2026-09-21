@@ -137,11 +137,6 @@ def login(session: requests.Session, email: str, password: str) -> bool:
         headers={**login_headers, "Referer": f"{BASE_URL}/ingresar"},
         timeout=30,
     )
-    print(
-        f"[DEBUG-TEMP] login POST status={r2.status_code} final_url={r2.url} "
-        f"redirects={len(r2.history)} cookies={sorted(session.cookies.keys())}",
-        file=sys.stderr,
-    )
     body = r2.text
     # Mismo criterio que el VBA: si la respuesta vuelve a traer el formulario
     # de sesion, el login fallo.
@@ -175,18 +170,14 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
         if r.status_code != 200:
             raise RuntimeError(f"ParkingApp respondio {r.status_code} en la pagina {page}")
         data = r.json()
-        if page <= 2:
-            print(
-                f"[DEBUG-TEMP] pagos.json page={page} keys={list(data.keys())} "
-                f"collection_len={len(data.get('collection') or [])} "
-                f"next_page={data.get('next_page')} pagination={data.get('pagination')!r}",
-                file=sys.stderr,
-            )
         records.extend(data.get("collection") or [])
-        if data.get("next_page") is None:
+        # El "next_page" real vive DENTRO de "pagination" (un dict con
+        # {"href","page"} o None en la ultima pagina) - no es un campo raiz.
+        pagination = data.get("pagination") or {}
+        if not pagination.get("next_page"):
             break
         page += 1
-        if page > 60:
+        if page > 500:
             raise RuntimeError("Demasiadas paginas al descargar de ParkingApp (posible loop infinito)")
     return records
 
