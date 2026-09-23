@@ -1,16 +1,16 @@
 name: Actualizar reporte de parking
 
 on:
-  schedule:
-    # Cada hora, las 24 horas (el parking opera 24/7). Antes corria 1 vez al
-    # dia (11:00 UTC) pero GitHub Actions no garantiza el horario exacto de
-    # un cron - se vio atrasarse hasta 6h y hasta saltarse un dia completo
-    # (2026-09-23). Correr cada hora no arregla esa falta de garantia, pero
-    # reduce la ventana de exposicion: si una hora falla, la siguiente (si
-    # dispara) se autocorrige via la reconciliacion de 5 dias. El script usa
-    # zoneinfo America/Santiago para todos los calculos de fecha, asi que el
-    # horario exacto de ejecucion no afecta los numeros del reporte.
-    - cron: '0 * * * *'
+  # Sin trigger "schedule" nativo a proposito (2026-09-23): se probo primero
+  # 1x/dia y despues cada hora, y en ambos casos GitHub Actions se salto
+  # disparos por completo (no solo atrasos) - no es confiable para este
+  # repo. El disparo automatico real es externo: un cron job en
+  # cron-job.org llama a la API de dispatch de este workflow cada hora
+  # (POST a /actions/workflows/actualizar-reporte.yml/dispatches con un
+  # token fine-grained scoped solo a Actions:write de este repo). Se quito
+  # el schedule nativo en vez de dejarlo como respaldo para no duplicar el
+  # trafico de login contra ParkingApp (ya es scraping, no API oficial, sin
+  # limites de rate documentados - mejor no arriesgar un bloqueo/captcha).
   workflow_dispatch: {}
 
 permissions:
