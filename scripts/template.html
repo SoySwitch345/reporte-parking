@@ -436,8 +436,10 @@ function renderDiaSemana(mes){
     tb.innerHTML+='<tr><td>'+d.charAt(0).toUpperCase()+d.slice(1)+'</td><td>'+fmtCLP(pm)+'</td><td>'+pt.toFixed(1)+'</td><td>'+fmtCLP(pmt)+'</td></tr>';
   });
   var labels = dias.map(function(d){return d.slice(0,3);});
-  if(chartDiaSemana){ chartDiaSemana.data.datasets[0].data = promMontos; chartDiaSemana.update(); }
-  else { chartDiaSemana = barChart(document.getElementById('chartDiaSemana'), labels, promMontos, {tooltipLabel:function(c){return fmtCLP(c.parsed.y);}}); }
+  requestAnimationFrame(function(){
+    if(chartDiaSemana){ chartDiaSemana.destroy(); chartDiaSemana=null; }
+    chartDiaSemana = barChart(document.getElementById('chartDiaSemana'), labels, promMontos, {noAnim:true, tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
+  });
 }
 function poblarSelectMes(){
   var cont=document.getElementById('mesButtons');
