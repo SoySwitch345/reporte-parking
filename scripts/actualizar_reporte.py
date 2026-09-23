@@ -488,6 +488,7 @@ def render_js_block(v: dict) -> str:
     monthly_json = "[" + ",".join(_fmt_monthly(m) for m in v["monthly"]) + "]"
     daily_json = "[" + ",".join(_fmt_daily(d) for d in v["daily"]) + "]"
     lines = [
+        f"const generadoEn = {j(v['generadoEn'])};",
         f"const monthly = {monthly_json};",
         f"const daily = {daily_json};",
         f"const hourly = {j(v['hourly'])};",
@@ -512,8 +513,9 @@ def render_js_block(v: dict) -> str:
     return "\n".join(lines)
 
 
-def render_report(dataset: list[dict], hoy: date) -> str:
+def render_report(dataset: list[dict], hoy: date, generado_en: datetime) -> str:
     valores = calcular_agregados(dataset, hoy)
+    valores["generadoEn"] = generado_en.isoformat(timespec="minutes")
     bloque = render_js_block(valores)
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = f.read()
@@ -533,7 +535,8 @@ def main() -> int:
         print("Faltan PARKINGAPP_EMAIL / PARKINGAPP_PASSWORD en el entorno.", file=sys.stderr)
         return 1
 
-    hoy = datetime.now(TZ).date()
+    generado_en = datetime.now(TZ).replace(tzinfo=None)
+    hoy = generado_en.date()
 
     session = requests.Session()
     if not login(session, email, password):
@@ -549,7 +552,7 @@ def main() -> int:
 
     save_dataset(nuevo_dataset)
 
-    html = render_report(nuevo_dataset, hoy)
+    html = render_report(nuevo_dataset, hoy, generado_en)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(html)
 

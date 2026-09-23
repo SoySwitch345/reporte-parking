@@ -238,6 +238,7 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   <div class="card" id="sec-historial">
     <h2><span class="code">N&middot;04</span>Historial diario</h2>
     <p class="note">Facturado por d&iacute;a. Filtra por semana, mes o un rango de fechas.</p>
+    <p class="note" style="margin-top:4px;">El aviso &ldquo;&#9888; revisar&rdquo; significa transacciones muy por debajo de lo t&iacute;pico para ese d&iacute;a de la semana (d&iacute;a flojo real, o sincronizaci&oacute;n incompleta). &ldquo;en curso&rdquo; marca el d&iacute;a en que se gener&oacute; este reporte &mdash; su total todav&iacute;a puede subir.</p>
     <div id="histFiltro"></div>
     <div class="chart-box wide"><canvas id="chartHistorial"></canvas></div>
     <input id="buscar" placeholder="Buscar fecha (dd/mm/aaaa)&hellip;" style="margin-top:16px;">
@@ -327,9 +328,19 @@ function calcProyeccionPonderada(){
 }
 const proyeccionPonderada = calcProyeccionPonderada();
 
-document.getElementById('subGenerado').textContent =
-  'Generado el ' + new Date().toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'}) +
-  ' ' + new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) + ' · Año ' + currentYear;
+const generadoEnDate = new Date(generadoEn);
+const hoyFechaStr = (function(){
+  var dd=('0'+generadoEnDate.getDate()).slice(-2), mm=('0'+(generadoEnDate.getMonth()+1)).slice(-2), yyyy=generadoEnDate.getFullYear();
+  return dd+'/'+mm+'/'+yyyy;
+})();
+const horasDesdeGenerado = (Date.now() - generadoEnDate.getTime()) / 3600000;
+let subGeneradoHtml =
+  'Generado el ' + generadoEnDate.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'}) +
+  ' ' + generadoEnDate.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) + ' · Año ' + currentYear;
+if (horasDesdeGenerado > 26) {
+  subGeneradoHtml += ' <span class="chip neg" title="La actualizaci&oacute;n autom&aacute;tica deber&iacute;a correr todos los d&iacute;as. Si pasaron m&aacute;s de 26 horas desde la &uacute;ltima, puede estar fallando en silencio.">&#9888; sin actualizar hace ' + Math.floor(horasDesdeGenerado) + 'h</span>';
+}
+document.getElementById('subGenerado').innerHTML = subGeneradoHtml;
 
 /* ---------- nav ---------- */
 const SECTIONS = [
@@ -548,10 +559,27 @@ function renderHistorialChart(dataDesc){
     });
   });
 }
+function medianaArr(arr){ var s=arr.slice().sort(function(a,b){return a-b;}); var mid=Math.floor(s.length/2); return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2; }
+var medianaTransDia = (function(){
+  var porDia = {};
+  daily.forEach(function(d){ (porDia[d.dia] = porDia[d.dia]||[]).push(d.transacciones); });
+  var out = {};
+  Object.keys(porDia).forEach(function(k){ out[k] = medianaArr(porDia[k]); });
+  return out;
+})();
 function renderDiario(filtro){
   var tb=document.getElementById('tbodyDiario'); tb.innerHTML='';
   historialData.filter(function(d){return !filtro||d.fecha.indexOf(filtro)!==-1;}).forEach(function(d){
-    tb.innerHTML+='<tr><td>'+d.fecha+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td></tr>';
+    var flag='';
+    if (d.fecha === hoyFechaStr) {
+      flag = ' <span class="chip" style="background:rgba(120,120,120,.15);color:var(--ink-2);" title="Día en curso al momento de generar este reporte (' + generadoEnDate.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) + '). El total todavía puede subir.">en curso</span>';
+    } else {
+      var med = medianaTransDia[d.dia] || 0;
+      if (med>0 && d.transacciones < med*0.3) {
+        flag = ' <span class="chip neg" title="Transacciones muy por debajo de lo típico para un '+d.dia+' ('+d.transacciones+' vs mediana '+med.toFixed(0)+'). Podría ser un día flojo real, o una sincronización incompleta con ParkingApp.">&#9888; revisar</span>';
+      }
+    }
+    tb.innerHTML+='<tr><td>'+d.fecha+flag+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td></tr>';
   });
 }
 renderDiario('');
