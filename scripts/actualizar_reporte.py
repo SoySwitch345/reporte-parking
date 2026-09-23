@@ -439,6 +439,7 @@ def calcular_agregados(dataset: list[dict], hoy: date) -> dict:
         "totalCobradoAnioAnterior": round(total_cobrado_anio_anterior, 2),
         "totalTransAnioAnterior": total_trans_anio_anterior,
         "tarifaMinActual": tarifa_min_actual,
+        "hoyRef": hoy.isoformat(),
     }
 
 
@@ -507,7 +508,8 @@ def _fmt_year_data(v: dict) -> str:
         '"nombreMesActual":' + j(v["nombreMesActual"]) + ","
         f'"totalCobradoAnioAnterior":{v["totalCobradoAnioAnterior"]:.2f},'
         f'"totalTransAnioAnterior":{v["totalTransAnioAnterior"]},'
-        f'"tarifaMinActual":{v["tarifaMinActual"]:g}'
+        f'"tarifaMinActual":{v["tarifaMinActual"]:g},'
+        '"hoyRef":' + j(v["hoyRef"]) +
         "}"
     )
 

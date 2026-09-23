@@ -323,16 +323,16 @@ let monthly, daily, hourly, heatmapData, occupancyHourlyData, occupancyHeatmapDa
     estadiaProm, diaCompletoCount, diaCompletoOcupEstim, totalTransAnio, cobradoMesActual,
     proyeccionMesActual, diasTranscurridosMesActual, diasTotalesMesActual, nombreMesActual,
     currentYear, totalCobradoAnioAnterior, totalTransAnioAnterior, tarifaMinActual,
-    historialData, medianaTransDia, bucketLabelsFull;
+    historialData, medianaTransDia, bucketLabelsFull, hoyRefAnio;
 
 function calcProyeccionPonderada(){
   var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   var sum={}, cnt={}; dias.forEach(function(d){sum[d]=0;cnt[d]=0;});
   daily.forEach(function(d){sum[d.dia]+=d.monto; cnt[d.dia]++;});
   var avg={}; dias.forEach(function(d){avg[d]=cnt[d]>0?sum[d]/cnt[d]:0;});
-  var hoy=new Date(); var restante=0;
+  var restante=0;
   for(var dd=diasTranscurridosMesActual+1; dd<=diasTotalesMesActual; dd++){
-    var f=new Date(hoy.getFullYear(),hoy.getMonth(),dd); restante+=avg[dias[f.getDay()]];
+    var f=new Date(hoyRefAnio.getFullYear(),hoyRefAnio.getMonth(),dd); restante+=avg[dias[f.getDay()]];
   }
   return cobradoMesActual+restante;
 }
@@ -397,7 +397,7 @@ let chartMensualMonto = null, chartMensualTrans = null;
 function renderMensualTabla(){
   var tb = document.getElementById('tbodyMensual'); tb.innerHTML = '';
   monthly.forEach(function(m,i){
-    if(m.transacciones===0 && i>new Date().getMonth()) return;
+    if(m.transacciones===0 && i>hoyRefAnio.getMonth()) return;
     var claseT = m.deltaTdia>=0?'pos':'neg', claseM = m.deltaMontoTransac>=0?'pos':'neg';
     var dT = i===0?'&mdash;':fmtPct(m.deltaTdia), dM = i===0?'&mdash;':fmtPct(m.deltaMontoTransac);
     var badge = m.cambioTarifa ? ' <span class="chip pos" title="La tarifa por minuto cambió este mes — parte de la variación en $/Transac puede deberse al precio, no al comportamiento de los clientes.">&#9889; tarifa</span>' : '';
@@ -487,7 +487,7 @@ function buildDateFilter(containerId, onChange){
     b.addEventListener('click', function(){
       pills.forEach(function(x){x.classList.remove('active');});
       b.classList.add('active');
-      var hoy = new Date();
+      var hoy = hoyRefAnio;
       if(b.dataset.p==='anio'){ iDesde.value=''; iHasta.value=''; aplicar(null,null,'Año completo'); }
       else if(b.dataset.p==='mes'){
         var d1 = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -690,7 +690,7 @@ function renderTendencia(){
     weeks[key].monto+=d.monto; weeks[key].trans+=d.transacciones;
   });
   var keys=Object.keys(weeks).map(Number).sort(function(a,b){return b-a;});
-  var mondayHoy=monday(new Date()).getTime();
+  var mondayHoy=monday(hoyRefAnio).getTime();
   keys=keys.filter(function(k){return k!==mondayHoy;});
   var cont=document.getElementById('tendenciaContainer');
   if(keys.length<2){ cont.innerHTML='<p class="txt">No hay suficientes semanas completas para comparar.</p>'; return; }
@@ -705,12 +705,14 @@ function renderTendencia(){
     '<div class="chip '+(dT>=0?'pos':'neg')+'" style="margin-top:10px;">'+(dT>=0?'&#9650;':'&#9660;')+' '+(dT>=0?'+':'')+dT.toFixed(1)+'% vs semana anterior</div></div>'+
     '</div>';
   var labels=['Semana anterior','Semana actual'];
+  requestAnimationFrame(function(){
   if(chartTendMonto){ chartTendMonto.destroy(); chartTendMonto=null; }
   if(chartTendTrans){ chartTendTrans.destroy(); chartTendTrans=null; }
   chartTendMonto = barChart(document.getElementById('chartTendMonto'), labels, [anterior.monto, actual.monto],
-    {colors:[cssVar('--baseline'), cssVar('--accent')], thick:56, tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
+    {noAnim:true, colors:[cssVar('--baseline'), cssVar('--accent')], thick:56, tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
   chartTendTrans = barChart(document.getElementById('chartTendTrans'), labels, [anterior.trans, actual.trans],
-    {colors:[cssVar('--baseline'), cssVar('--series-1')], thick:56});
+    {noAnim:true, colors:[cssVar('--baseline'), cssVar('--series-1')], thick:56});
+  });
 }
 
 /* ---------- orquestacion: dibuja TODAS las secciones con los datos activos ---------- */
@@ -732,15 +734,17 @@ function renderAll(){
     return '<div class="kpi"><div class="lbl">'+k.l+'</div><div class="val">'+k.v+'</div><div class="foot">'+k.f+'</div></div>';
   }).join('');
 
-  var mesesActivos = monthly.filter(function(m,i){return m.transacciones>0 || i<=new Date().getMonth();});
-  if(chartMensualMonto){ chartMensualMonto.destroy(); chartMensualMonto=null; }
-  if(chartMensualTrans){ chartMensualTrans.destroy(); chartMensualTrans=null; }
-  chartMensualMonto = barChart(document.getElementById('chartMensualMonto'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
-    mesesActivos.map(function(m){return m.cobrado;}),
-    {tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
-  chartMensualTrans = barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
-    mesesActivos.map(function(m){return m.transacciones;}),
-    {colors:cssVar('--accent')});
+  var mesesActivos = monthly.filter(function(m,i){return m.transacciones>0 || i<=hoyRefAnio.getMonth();});
+  requestAnimationFrame(function(){
+    if(chartMensualMonto){ chartMensualMonto.destroy(); chartMensualMonto=null; }
+    if(chartMensualTrans){ chartMensualTrans.destroy(); chartMensualTrans=null; }
+    chartMensualMonto = barChart(document.getElementById('chartMensualMonto'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
+      mesesActivos.map(function(m){return m.cobrado;}),
+      {noAnim:true, tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
+    chartMensualTrans = barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
+      mesesActivos.map(function(m){return m.transacciones;}),
+      {noAnim:true, colors:cssVar('--accent')});
+  });
   renderMensualTabla();
 
   renderProyeccion(proyeccionPonderada);
@@ -798,6 +802,8 @@ function cambiarAnio(anio){
   diasTranscurridosMesActual = d.diasTranscurridosMesActual; diasTotalesMesActual = d.diasTotalesMesActual;
   nombreMesActual = d.nombreMesActual; totalCobradoAnioAnterior = d.totalCobradoAnioAnterior; totalTransAnioAnterior = d.totalTransAnioAnterior;
   tarifaMinActual = d.tarifaMinActual;
+  var hp = d.hoyRef.split('-');
+  hoyRefAnio = new Date(Number(hp[0]), Number(hp[1])-1, Number(hp[2]));
   currentYear = anio; anioSeleccionado = anio;
   pintarSelectorAnio();
   renderAll();
