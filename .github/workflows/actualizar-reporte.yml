@@ -2,12 +2,15 @@ name: Actualizar reporte de parking
 
 on:
   schedule:
-    # 11:00 UTC ~= 08:00 Chile (UTC-3 en horario de verano, sep-abr) o 07:00
-    # Chile (UTC-4 en horario de invierno, abr-sep). El script usa
-    # zoneinfo America/Santiago para todos los calculos de fecha, asi que
-    # el desfase de 1h dos veces al año no afecta los numeros del reporte,
-    # solo la hora exacta de ejecucion.
-    - cron: '0 11 * * *'
+    # Cada hora, las 24 horas (el parking opera 24/7). Antes corria 1 vez al
+    # dia (11:00 UTC) pero GitHub Actions no garantiza el horario exacto de
+    # un cron - se vio atrasarse hasta 6h y hasta saltarse un dia completo
+    # (2026-09-23). Correr cada hora no arregla esa falta de garantia, pero
+    # reduce la ventana de exposicion: si una hora falla, la siguiente (si
+    # dispara) se autocorrige via la reconciliacion de 5 dias. El script usa
+    # zoneinfo America/Santiago para todos los calculos de fecha, asi que el
+    # horario exacto de ejecucion no afecta los numeros del reporte.
+    - cron: '0 * * * *'
   workflow_dispatch: {}
 
 permissions:
