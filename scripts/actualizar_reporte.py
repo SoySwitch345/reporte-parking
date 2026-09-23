@@ -483,40 +483,63 @@ def _fmt_daily(d: dict) -> str:
     )
 
 
-def render_js_block(v: dict) -> str:
+def _fmt_year_data(v: dict) -> str:
     j = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
     monthly_json = "[" + ",".join(_fmt_monthly(m) for m in v["monthly"]) + "]"
     daily_json = "[" + ",".join(_fmt_daily(d) for d in v["daily"]) + "]"
+    return (
+        "{"
+        '"monthly":' + monthly_json + ","
+        '"daily":' + daily_json + ","
+        '"hourly":' + j(v["hourly"]) + ","
+        '"heatmapData":' + j(v["heatmapData"]) + ","
+        '"occupancyHourlyData":' + j(v["occupancyHourlyData"]) + ","
+        '"occupancyHeatmapData":' + j(v["occupancyHeatmapData"]) + ","
+        '"buckets":' + j(v["buckets"]) + ","
+        f'"estadiaProm":{v["estadiaProm"]:.2f},'
+        f'"diaCompletoCount":{v["diaCompletoCount"]},'
+        f'"diaCompletoOcupEstim":{v["diaCompletoOcupEstim"]},'
+        f'"totalTransAnio":{v["totalTransAnio"]},'
+        '"cobradoMesActual":' + j(v["cobradoMesActual"]) + ","
+        f'"proyeccionMesActual":{v["proyeccionMesActual"]:.2f},'
+        f'"diasTranscurridosMesActual":{v["diasTranscurridosMesActual"]},'
+        f'"diasTotalesMesActual":{v["diasTotalesMesActual"]},'
+        '"nombreMesActual":' + j(v["nombreMesActual"]) + ","
+        f'"totalCobradoAnioAnterior":{v["totalCobradoAnioAnterior"]:.2f},'
+        f'"totalTransAnioAnterior":{v["totalTransAnioAnterior"]},'
+        f'"tarifaMinActual":{v["tarifaMinActual"]:g}'
+        "}"
+    )
+
+
+def calcular_agregados_por_anio(dataset: list[dict], hoy_real: date) -> dict[int, dict]:
+    """Un bloque de agregados por cada año presente en el dataset. Para el año
+    real actual usa 'hoy_real' (mes en curso); para años anteriores ya cerrados
+    usa el 31 de diciembre de ese año, con lo que 'mes actual' = diciembre
+    completo y la proyeccion coincide exactamente con lo recaudado (nada que
+    proyectar en un año cerrado)."""
+    anios = sorted({r["dt"].year for r in dataset})
+    resultado = {}
+    for anio in anios:
+        hoy_ref = hoy_real if anio == hoy_real.year else date(anio, 12, 31)
+        resultado[anio] = calcular_agregados(dataset, hoy_ref)
+    return resultado
+
+
+def render_js_block(por_anio: dict[int, dict], anio_actual: int, generado_en_str: str) -> str:
+    j = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    years_json = "{" + ",".join(f'"{anio}":{_fmt_year_data(v)}' for anio, v in por_anio.items()) + "}"
     lines = [
-        f"const generadoEn = {j(v['generadoEn'])};",
-        f"const monthly = {monthly_json};",
-        f"const daily = {daily_json};",
-        f"const hourly = {j(v['hourly'])};",
-        f"const heatmapData = {j(v['heatmapData'])};",
-        f"const occupancyHourlyData = {j(v['occupancyHourlyData'])};",
-        f"const occupancyHeatmapData = {j(v['occupancyHeatmapData'])};",
-        f"const buckets = {j(v['buckets'])};",
-        f"const estadiaProm = {v['estadiaProm']:.2f};",
-        f"const diaCompletoCount = {v['diaCompletoCount']};",
-        f"const diaCompletoOcupEstim = {v['diaCompletoOcupEstim']};",
-        f"const totalTransAnio = {v['totalTransAnio']};",
-        f"const cobradoMesActual = {v['cobradoMesActual']};",
-        f"const proyeccionMesActual = {v['proyeccionMesActual']:.2f};",
-        f"const diasTranscurridosMesActual = {v['diasTranscurridosMesActual']};",
-        f"const diasTotalesMesActual = {v['diasTotalesMesActual']};",
-        f"const nombreMesActual = '{v['nombreMesActual']}';",
-        f"const currentYear = {v['currentYear']};",
-        f"const totalCobradoAnioAnterior = {v['totalCobradoAnioAnterior']:.2f};",
-        f"const totalTransAnioAnterior = {v['totalTransAnioAnterior']};",
-        f"const tarifaMinActual = {v['tarifaMinActual']:g};",
+        f"const generadoEn = {j(generado_en_str)};",
+        f"const dataByYear = {years_json};",
+        f"let anioSeleccionado = {anio_actual};",
     ]
     return "\n".join(lines)
 
 
 def render_report(dataset: list[dict], hoy: date, generado_en: datetime) -> str:
-    valores = calcular_agregados(dataset, hoy)
-    valores["generadoEn"] = generado_en.isoformat(timespec="minutes")
-    bloque = render_js_block(valores)
+    por_anio = calcular_agregados_por_anio(dataset, hoy)
+    bloque = render_js_block(por_anio, hoy.year, generado_en.isoformat(timespec="minutes"))
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = f.read()
     if "{{DATOS_JS}}" not in template:

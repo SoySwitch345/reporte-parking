@@ -194,6 +194,7 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   <div class="eyebrow"><span class="dot"></span>SWITCH VESPUCIO 345 &middot; ESTACIONAMIENTO</div>
   <h1 class="title">Consola de pagos &mdash; Parking</h1>
   <div class="sub" id="subGenerado">Generado el &mdash; &middot; A&ntilde;o &mdash;</div>
+  <div class="pillrow" id="anioSelector" style="margin-top:10px;"></div>
 </div>
 <div class="stripe"></div>
 
@@ -315,6 +316,15 @@ Chart.defaults.animation = reduceMotion ? false : {duration:280};
 function fmtCLP(n){return '$' + Math.round(n).toLocaleString('es-CL');}
 function fmtPct(n){var s=(n*100).toFixed(1)+'%'; return (n>=0?'+':'')+s;}
 
+/* Datos del año actualmente seleccionado - reasignados por cambiarAnio(), no
+   redeclarados, para que las funciones de cada seccion (definidas una sola
+   vez, fuera de renderAll) siempre lean el valor mas reciente. */
+let monthly, daily, hourly, heatmapData, occupancyHourlyData, occupancyHeatmapData, buckets,
+    estadiaProm, diaCompletoCount, diaCompletoOcupEstim, totalTransAnio, cobradoMesActual,
+    proyeccionMesActual, diasTranscurridosMesActual, diasTotalesMesActual, nombreMesActual,
+    currentYear, totalCobradoAnioAnterior, totalTransAnioAnterior, tarifaMinActual,
+    historialData, medianaTransDia, bucketLabelsFull;
+
 function calcProyeccionPonderada(){
   var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   var sum={}, cnt={}; dias.forEach(function(d){sum[d]=0;cnt[d]=0;});
@@ -326,7 +336,6 @@ function calcProyeccionPonderada(){
   }
   return cobradoMesActual+restante;
 }
-const proyeccionPonderada = calcProyeccionPonderada();
 
 const generadoEnDate = new Date(generadoEn);
 const hoyFechaStr = (function(){
@@ -336,9 +345,9 @@ const hoyFechaStr = (function(){
 const horasDesdeGenerado = (Date.now() - generadoEnDate.getTime()) / 3600000;
 let subGeneradoHtml =
   'Generado el ' + generadoEnDate.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'}) +
-  ' ' + generadoEnDate.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) + ' · Año ' + currentYear;
+  ' ' + generadoEnDate.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
 if (horasDesdeGenerado > 26) {
-  subGeneradoHtml += ' <span class="chip neg" title="La actualizaci&oacute;n autom&aacute;tica deber&iacute;a correr todos los d&iacute;as. Si pasaron m&aacute;s de 26 horas desde la &uacute;ltima, puede estar fallando en silencio.">&#9888; sin actualizar hace ' + Math.floor(horasDesdeGenerado) + 'h</span>';
+  subGeneradoHtml += ' <span class="chip neg" title="La actualización automática debería correr todos los días. Si pasaron más de 26 horas desde la última, puede estar fallando en silencio.">&#9888; sin actualizar hace ' + Math.floor(horasDesdeGenerado) + 'h</span>';
 }
 document.getElementById('subGenerado').innerHTML = subGeneradoHtml;
 
@@ -353,23 +362,6 @@ const SECTIONS = [
 ];
 document.getElementById('navRow').innerHTML = SECTIONS.map(function(s){
   return '<a class="navlink" href="#'+s[1]+'"><span class="n">'+s[0]+'</span>'+s[2]+'</a>';
-}).join('');
-
-/* ---------- KPI strip ---------- */
-const totalCobradoAnio = monthly.reduce(function(a,m){return a+m.cobrado;},0);
-let kpiRecaudadoFoot = totalTransAnio.toLocaleString('es-CL')+' transacciones';
-if(totalTransAnioAnterior>0 && totalCobradoAnioAnterior>0){
-  var deltaAnio = (totalCobradoAnio/totalCobradoAnioAnterior-1)*100;
-  kpiRecaudadoFoot += ' · <span style="color:'+(deltaAnio>=0?'var(--good)':'var(--critical)')+';font-weight:600;">'+(deltaAnio>=0?'&#9650;':'&#9660;')+' '+(deltaAnio>=0?'+':'')+deltaAnio.toFixed(1)+'% vs mismo período '+(currentYear-1)+'</span>';
-}
-document.getElementById('kpiRow').innerHTML = [
-  {l:'Recaudado '+currentYear, v:fmtCLP(totalCobradoAnio), f:kpiRecaudadoFoot},
-  {l:'Recaudado '+nombreMesActual, v:fmtCLP(cobradoMesActual), f:'día '+diasTranscurridosMesActual+' de '+diasTotalesMesActual},
-  {l:'Proyección lineal '+nombreMesActual, v:fmtCLP(proyeccionMesActual), f:'ritmo lineal'},
-  {l:'Proyección ponderada '+nombreMesActual, v:fmtCLP(proyeccionPonderada), f:'por día de semana'},
-  {l:'Estadía promedio', v:estadiaProm.toFixed(0)+' min', f:'&asymp; '+(estadiaProm/60).toFixed(1)+' h · excluye tarifa máxima'},
-].map(function(k){
-  return '<div class="kpi"><div class="lbl">'+k.l+'</div><div class="val">'+k.v+'</div><div class="foot">'+k.f+'</div></div>';
 }).join('');
 
 /* ---------- chart helpers ---------- */
@@ -401,16 +393,9 @@ function barChart(ctx, labels, values, opts){
 }
 
 /* ---------- N-01 resumen mensual ---------- */
-const mesesActivos = monthly.filter(function(m,i){return m.transacciones>0 || i<=new Date().getMonth();});
-barChart(document.getElementById('chartMensualMonto'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
-  mesesActivos.map(function(m){return m.cobrado;}),
-  {tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
-barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
-  mesesActivos.map(function(m){return m.transacciones;}),
-  {colors:cssVar('--accent')});
-
-(function renderMensualTabla(){
-  var tb = document.getElementById('tbodyMensual');
+let chartMensualMonto = null, chartMensualTrans = null;
+function renderMensualTabla(){
+  var tb = document.getElementById('tbodyMensual'); tb.innerHTML = '';
   monthly.forEach(function(m,i){
     if(m.transacciones===0 && i>new Date().getMonth()) return;
     var claseT = m.deltaTdia>=0?'pos':'neg', claseM = m.deltaMontoTransac>=0?'pos':'neg';
@@ -421,10 +406,10 @@ barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function
       '</td><td>'+(m.estadiaProm>0?m.estadiaProm.toFixed(0)+' min':'&mdash;')+
       '</td><td class="'+claseT+'">'+dT+'</td><td class="'+claseM+'">'+dM+'</td></tr>';
   });
-})();
+}
 
 /* ---------- N-02 proyeccion ---------- */
-(function(){
+function renderProyeccion(proyeccionPonderada){
   document.getElementById('proyeccionTxt').innerHTML =
     '<ul style="margin:4px 0 0 18px;padding:0;list-style:disc;">'+
     '<li style="margin-bottom:4px;">Recaudado en <b>'+nombreMesActual+'</b> hasta el día '+diasTranscurridosMesActual+' de '+diasTotalesMesActual+': <b>'+fmtCLP(cobradoMesActual)+'</b></li>'+
@@ -433,7 +418,7 @@ barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function
     '</ul>'+
     '<span style="display:block;margin-top:8px;color:var(--ink-muted);font-size:11.5px;">La ponderada usa el promedio histórico de cada día de semana para estimar lo que falta del mes.</span>';
   document.getElementById('proyeccionBar').style.width = Math.min(100, diasTranscurridosMesActual/diasTotalesMesActual*100)+'%';
-})();
+}
 
 /* ---------- N-03 dia semana ---------- */
 let chartDiaSemana = null;
@@ -454,7 +439,7 @@ function renderDiaSemana(mes){
   if(chartDiaSemana){ chartDiaSemana.data.datasets[0].data = promMontos; chartDiaSemana.update(); }
   else { chartDiaSemana = barChart(document.getElementById('chartDiaSemana'), labels, promMontos, {tooltipLabel:function(c){return fmtCLP(c.parsed.y);}}); }
 }
-(function poblarSelectMes(){
+function poblarSelectMes(){
   var cont=document.getElementById('mesButtons');
   var mesesConDatos=[...new Set(daily.map(function(d){return d.mes;}))].sort(function(a,b){return a-b;});
   var mesActivo = mesesConDatos.length? mesesConDatos[mesesConDatos.length-1] : null;
@@ -470,7 +455,7 @@ function renderDiaSemana(mes){
   }
   pintar();
   if(mesActivo!==null) renderDiaSemana(mesActivo);
-})();
+}
 
 /* ---------- filtro de fechas (compartido por N-04, N-05, N-06) ---------- */
 function fechaToISO(f){var p=f.split('/'); return p[2]+'-'+p[1]+'-'+p[0];}
@@ -530,7 +515,6 @@ function buildDateFilter(containerId, onChange){
 
 /* ---------- N-04 historial ---------- */
 var historialChart = null;
-var historialData = daily.slice();
 function renderHistorialChart(dataDesc){
   var chrono = dataDesc.slice().reverse();
   var labels = chrono.map(function(d){return d.fecha;});
@@ -560,13 +544,6 @@ function renderHistorialChart(dataDesc){
   });
 }
 function medianaArr(arr){ var s=arr.slice().sort(function(a,b){return a-b;}); var mid=Math.floor(s.length/2); return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2; }
-var medianaTransDia = (function(){
-  var porDia = {};
-  daily.forEach(function(d){ (porDia[d.dia] = porDia[d.dia]||[]).push(d.transacciones); });
-  var out = {};
-  Object.keys(porDia).forEach(function(k){ out[k] = medianaArr(porDia[k]); });
-  return out;
-})();
 function renderDiario(filtro){
   var tb=document.getElementById('tbodyDiario'); tb.innerHTML='';
   historialData.filter(function(d){return !filtro||d.fecha.indexOf(filtro)!==-1;}).forEach(function(d){
@@ -582,14 +559,7 @@ function renderDiario(filtro){
     tb.innerHTML+='<tr><td>'+d.fecha+flag+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td></tr>';
   });
 }
-renderDiario('');
-renderHistorialChart(historialData);
 document.getElementById('buscar').addEventListener('input', function(e){renderDiario(e.target.value);});
-buildDateFilter('histFiltro', function(filtered){
-  historialData = filtered;
-  renderDiario(document.getElementById('buscar').value);
-  renderHistorialChart(filtered);
-});
 
 /* ---------- N-05 hora pico ---------- */
 var chartHP = null, chartHPO = null;
@@ -622,12 +592,9 @@ function renderHoraPico(dataArr, label){
     }});
   });
 }
-renderHoraPico(daily, 'Año completo');
-buildDateFilter('horaPicoFiltro', function(filtered, label){ renderHoraPico(filtered, label); });
 
 /* ---------- N-06 distribucion ---------- */
 var chartBuckets = null;
-var bucketLabelsFull = buckets.map(function(b){return b.rango;});
 var bucketShortLabels = ['<$1.000','$1-2k','$2-3k','$3-5k','$5-10k','$10-15k','$15k+ (tope)'];
 var bucketRamp = ['--seq-100','--seq-250','--seq-400','--seq-500','--seq-500','--seq-600','--seq-600'].map(cssVar);
 function sumarBuckets(dataArr){
@@ -665,11 +632,9 @@ function renderDistribucion(dataArr, label){
       }});
   });
 }
-renderDistribucion(daily, 'Año completo');
-buildDateFilter('distribFiltro', function(filtered, label){ renderDistribucion(filtered, label); });
 
 /* ---------- N-07 ranking ---------- */
-(function(){
+function renderRanking(){
   function median(arr){ var s=arr.slice().sort(function(a,b){return a-b;}); var mid=Math.floor(s.length/2); return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2; }
   var porDia = {};
   daily.forEach(function(d){ (porDia[d.dia] = porDia[d.dia]||[]).push(d.transacciones); });
@@ -690,7 +655,7 @@ buildDateFilter('distribFiltro', function(filtered, label){ renderDistribucion(f
   }
   rows(top, document.getElementById('tbodyMejores'));
   rows(bottom, document.getElementById('tbodyPeores'));
-})();
+}
 
 /* ---------- N-08/09 heatmaps ---------- */
 function renderHeatmap(data, containerId, isOcup){
@@ -711,11 +676,10 @@ function renderHeatmap(data, containerId, isOcup){
   html+='</div><div class="heat-scale"><span>menos</span><div class="ramp"></div><span>más</span></div>';
   document.getElementById(containerId).innerHTML = html;
 }
-renderHeatmap(heatmapData, 'heatmapReal', false);
-renderHeatmap(occupancyHeatmapData, 'heatmapOcup', true);
 
 /* ---------- N-10 tendencia ---------- */
-(function(){
+let chartTendMonto = null, chartTendTrans = null;
+function renderTendencia(){
   function parseF(f){var p=f.split('/'); return new Date(+p[2],+p[1]-1,+p[0]);}
   function monday(dt){var day=dt.getDay(); var diff=(day===0?-6:1-day); var m=new Date(dt); m.setDate(dt.getDate()+diff); m.setHours(0,0,0,0); return m;}
   var weeks={};
@@ -740,11 +704,104 @@ renderHeatmap(occupancyHeatmapData, 'heatmapOcup', true);
     '<div class="chip '+(dT>=0?'pos':'neg')+'" style="margin-top:10px;">'+(dT>=0?'&#9650;':'&#9660;')+' '+(dT>=0?'+':'')+dT.toFixed(1)+'% vs semana anterior</div></div>'+
     '</div>';
   var labels=['Semana anterior','Semana actual'];
-  barChart(document.getElementById('chartTendMonto'), labels, [anterior.monto, actual.monto],
+  if(chartTendMonto){ chartTendMonto.destroy(); chartTendMonto=null; }
+  if(chartTendTrans){ chartTendTrans.destroy(); chartTendTrans=null; }
+  chartTendMonto = barChart(document.getElementById('chartTendMonto'), labels, [anterior.monto, actual.monto],
     {colors:[cssVar('--baseline'), cssVar('--accent')], thick:56, tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
-  barChart(document.getElementById('chartTendTrans'), labels, [anterior.trans, actual.trans],
+  chartTendTrans = barChart(document.getElementById('chartTendTrans'), labels, [anterior.trans, actual.trans],
     {colors:[cssVar('--baseline'), cssVar('--series-1')], thick:56});
-})();
+}
+
+/* ---------- orquestacion: dibuja TODAS las secciones con los datos activos ---------- */
+function renderAll(){
+  var totalCobradoAnio = monthly.reduce(function(a,m){return a+m.cobrado;},0);
+  var kpiRecaudadoFoot = totalTransAnio.toLocaleString('es-CL')+' transacciones';
+  if(totalTransAnioAnterior>0 && totalCobradoAnioAnterior>0){
+    var deltaAnio = (totalCobradoAnio/totalCobradoAnioAnterior-1)*100;
+    kpiRecaudadoFoot += ' · <span style="color:'+(deltaAnio>=0?'var(--good)':'var(--critical)')+';font-weight:600;">'+(deltaAnio>=0?'&#9650;':'&#9660;')+' '+(deltaAnio>=0?'+':'')+deltaAnio.toFixed(1)+'% vs mismo período '+(currentYear-1)+'</span>';
+  }
+  var proyeccionPonderada = calcProyeccionPonderada();
+  document.getElementById('kpiRow').innerHTML = [
+    {l:'Recaudado '+currentYear, v:fmtCLP(totalCobradoAnio), f:kpiRecaudadoFoot},
+    {l:'Recaudado '+nombreMesActual, v:fmtCLP(cobradoMesActual), f:'día '+diasTranscurridosMesActual+' de '+diasTotalesMesActual},
+    {l:'Proyección lineal '+nombreMesActual, v:fmtCLP(proyeccionMesActual), f:'ritmo lineal'},
+    {l:'Proyección ponderada '+nombreMesActual, v:fmtCLP(proyeccionPonderada), f:'por día de semana'},
+    {l:'Estadía promedio', v:estadiaProm.toFixed(0)+' min', f:'&asymp; '+(estadiaProm/60).toFixed(1)+' h · excluye tarifa máxima'},
+  ].map(function(k){
+    return '<div class="kpi"><div class="lbl">'+k.l+'</div><div class="val">'+k.v+'</div><div class="foot">'+k.f+'</div></div>';
+  }).join('');
+
+  var mesesActivos = monthly.filter(function(m,i){return m.transacciones>0 || i<=new Date().getMonth();});
+  if(chartMensualMonto){ chartMensualMonto.destroy(); chartMensualMonto=null; }
+  if(chartMensualTrans){ chartMensualTrans.destroy(); chartMensualTrans=null; }
+  chartMensualMonto = barChart(document.getElementById('chartMensualMonto'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
+    mesesActivos.map(function(m){return m.cobrado;}),
+    {tooltipLabel:function(c){return fmtCLP(c.parsed.y);}});
+  chartMensualTrans = barChart(document.getElementById('chartMensualTrans'), mesesActivos.map(function(m){return m.nombre.slice(0,3);}),
+    mesesActivos.map(function(m){return m.transacciones;}),
+    {colors:cssVar('--accent')});
+  renderMensualTabla();
+
+  renderProyeccion(proyeccionPonderada);
+
+  poblarSelectMes();
+
+  historialData = daily.slice();
+  medianaTransDia = (function(){
+    var porDia = {};
+    daily.forEach(function(d){ (porDia[d.dia] = porDia[d.dia]||[]).push(d.transacciones); });
+    var out = {};
+    Object.keys(porDia).forEach(function(k){ out[k] = medianaArr(porDia[k]); });
+    return out;
+  })();
+  renderDiario('');
+  renderHistorialChart(historialData);
+  buildDateFilter('histFiltro', function(filtered){
+    historialData = filtered;
+    renderDiario(document.getElementById('buscar').value);
+    renderHistorialChart(filtered);
+  });
+
+  renderHoraPico(daily, 'Año completo');
+  buildDateFilter('horaPicoFiltro', function(filtered, label){ renderHoraPico(filtered, label); });
+
+  bucketLabelsFull = buckets.map(function(b){return b.rango;});
+  renderDistribucion(daily, 'Año completo');
+  buildDateFilter('distribFiltro', function(filtered, label){ renderDistribucion(filtered, label); });
+
+  renderRanking();
+
+  renderHeatmap(heatmapData, 'heatmapReal', false);
+  renderHeatmap(occupancyHeatmapData, 'heatmapOcup', true);
+
+  renderTendencia();
+}
+
+/* ---------- selector de año ---------- */
+function pintarSelectorAnio(){
+  var anios = Object.keys(dataByYear).map(Number).sort(function(a,b){return b-a;});
+  var cont = document.getElementById('anioSelector');
+  cont.innerHTML = anios.map(function(a){
+    return '<button type="button" class="pill'+(a===anioSeleccionado?' active':'')+'" data-anio="'+a+'">'+a+'</button>';
+  }).join('');
+  cont.querySelectorAll('.pill').forEach(function(b){
+    b.addEventListener('click', function(){ cambiarAnio(Number(b.dataset.anio)); });
+  });
+}
+function cambiarAnio(anio){
+  var d = dataByYear[anio];
+  monthly = d.monthly; daily = d.daily; hourly = d.hourly;
+  heatmapData = d.heatmapData; occupancyHourlyData = d.occupancyHourlyData; occupancyHeatmapData = d.occupancyHeatmapData;
+  buckets = d.buckets; estadiaProm = d.estadiaProm; diaCompletoCount = d.diaCompletoCount; diaCompletoOcupEstim = d.diaCompletoOcupEstim;
+  totalTransAnio = d.totalTransAnio; cobradoMesActual = d.cobradoMesActual; proyeccionMesActual = d.proyeccionMesActual;
+  diasTranscurridosMesActual = d.diasTranscurridosMesActual; diasTotalesMesActual = d.diasTotalesMesActual;
+  nombreMesActual = d.nombreMesActual; totalCobradoAnioAnterior = d.totalCobradoAnioAnterior; totalTransAnioAnterior = d.totalTransAnioAnterior;
+  tarifaMinActual = d.tarifaMinActual;
+  currentYear = anio; anioSeleccionado = anio;
+  pintarSelectorAnio();
+  renderAll();
+}
+cambiarAnio(anioSeleccionado);
 </script>
 
 </body></html>
