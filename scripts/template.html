@@ -645,6 +645,7 @@ function renderRanking(){
   var top=sorted.slice(0,10), bottom=sorted.slice(-10).reverse();
   var maxV = top.length? top[0].monto : 1;
   function rows(list, tb){
+    tb.innerHTML = '';
     list.forEach(function(d){
       var pct = maxV>0 ? Math.max(4,(d.monto/maxV*100)) : 0;
       var med = medianaDia[d.dia] || 0;
