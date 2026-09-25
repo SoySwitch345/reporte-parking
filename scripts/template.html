@@ -132,11 +132,34 @@ tbody tr:hover td{background:var(--surface-2);}
 .chip{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:20px;}
 .chip.pos{background:rgba(12,163,12,.12); color:var(--good);}
 .chip.neg{background:rgba(208,59,59,.12); color:var(--critical);}
-.ab-lock{border:1px dashed var(--border); border-radius:10px; padding:16px 18px; margin-top:22px;}
-.ab-lock input[type=password], .ab-lock input[type=search]{font:inherit; padding:7px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--ink); min-width:220px;}
-table.ab-sort th{cursor:pointer; user-select:none;}
-table.ab-sort th.on::after{content:" \25BE";} table.ab-sort th.on.asc::after{content:" \25B4";}
+.ab-bar{display:flex; gap:12px 18px; align-items:center; flex-wrap:wrap; margin:10px 0 4px;}
 .ab-sel{font:inherit; padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--ink);}
+.ab-seg{display:inline-flex; flex-wrap:wrap; max-width:100%; border:1px solid var(--border); border-radius:18px; padding:3px; gap:2px; background:var(--surface);}
+#sec-abonados .grid-2 > *, #sec-abonados .grid-3 > *{min-width:0;}
+.ab-seg button{font:inherit; font-size:12.5px; border:0; background:transparent; color:var(--ink-2); padding:6px 13px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;}
+.ab-seg button .dot{width:9px; height:9px; border-radius:50%; background:var(--c); box-shadow:0 0 0 2px var(--surface);}
+.ab-seg button.on{background:var(--ink); color:var(--surface);}
+.ab-seg button:focus-visible, .ab-tabs button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.ab-blk{border-top:1px solid var(--border); margin-top:28px; padding-top:18px;}
+.ab-blk > h3{margin:0 0 4px;}
+.ab-blk > .note{margin:0 0 14px;}
+.grid-3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px;}
+@media (max-width:1100px){ .grid-3{grid-template-columns:1fr;} }
+.ab-conc{display:flex; height:22px; border-radius:6px; overflow:hidden; margin:10px 0 8px; background:var(--border);}
+.ab-conc span{display:block; height:100%;}
+.ab-legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-2);}
+.ab-legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px;}
+details.ab-ctrl summary{cursor:pointer; font-weight:600; color:var(--ink-2);}
+details.ab-ctrl[open] summary{margin-bottom:10px;}
+.ab-lock{border:1px dashed var(--border); border-radius:10px; padding:16px 18px; margin-top:28px;}
+.ab-lock input[type=password], .ab-lock input[type=search]{font:inherit; padding:7px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--ink); min-width:220px;}
+.ab-tabs{display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 14px;}
+.ab-tabs button{font:inherit; font-size:12.5px; padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--ink-2); cursor:pointer;}
+.ab-tabs button.on{border-color:var(--ink); color:var(--ink); font-weight:600;}
+table.ab-sort th{cursor:pointer; user-select:none;}
+#abDetalle td{white-space:nowrap;} #abDetalle td.nom{white-space:normal; min-width:220px;}
+table.ab-sort th.on::after{content:" \25BE";} table.ab-sort th.on.asc::after{content:" \25B4";}
+tr.ab-hl td{background:var(--accent-soft);}
 .bar-cell{position:relative;}
 .bar-cell .fill{position:absolute; inset:2px 2px 2px 2px; background:var(--series-1-soft); border-radius:3px; z-index:0;}
 .bar-cell span{position:relative; z-index:1;}
@@ -316,46 +339,90 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
     <h2><span class="code">N&middot;11</span>Abonados</h2>
     <p class="note" id="abNota">Cargando datos de abonados&hellip;</p>
     <div id="abCuerpo" style="display:none;">
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 4px;">
-        <label style="font-size:12px;color:var(--ink-2);">Mes <select id="abMes" class="ab-sel"></select></label>
-        <span class="note" style="margin:0;" id="abMesNota"></span>
+      <div class="ab-bar">
+        <label style="font-size:12.5px;color:var(--ink-2);">Mes <select id="abMes" class="ab-sel"></select></label>
+        <div class="ab-seg" id="abSector" role="group" aria-label="Sector"></div>
       </div>
-      <div class="kpis" id="abKpis"></div>
-      <h3 style="margin-top:22px;">Por tipo de abonado</h3>
-      <div class="tblwrap"><table><thead><tr><th>Tipo</th><th>Contratos</th><th>Vigentes</th><th>UF</th><th>$</th><th>Ticket prom.</th><th>Nuevos</th><th>Bajas</th><th>Retenci&oacute;n 3 m</th><th>Retenci&oacute;n 12 m</th></tr></thead><tbody id="abTipos"></tbody></table></div>
-      <p class="note" style="margin-top:8px;">Nuevos / bajas: contratos que aparecen o dejan de facturar respecto al mes anterior. Retenci&oacute;n: de los contratos que hab&iacute;a hace 3 (o 12) meses, qu&eacute; porcentaje sigue facturando este mes.</p>
-      <h3 style="margin-top:22px;">Evoluci&oacute;n mensual (UF)</h3>
-      <p class="note" style="margin:0 0 10px;">Barras claras = meses futuros: ingreso ya comprometido por los contratos vigentes (puede cambiar con renovaciones o bajas).</p>
-      <div class="chart-box wide"><canvas id="chartAbEvo"></canvas></div>
-      <div class="grid-2" style="margin-top:22px;">
-        <div><h3>Fijo vs. variable</h3><p class="note" style="margin:0 0 10px;">Ingreso mensual del estacionamiento: abonados (fijo) vs. pagos por hora (variable).</p><div class="chart-box"><canvas id="chartAbMix"></canvas></div></div>
-        <div><h3>Vencimientos pr&oacute;ximos</h3><p class="note" style="margin:0 0 10px;" id="abVencNota"></p>
-          <div class="tblwrap"><table><thead><tr><th>Tipo</th><th>En 3 meses</th><th>En 6 meses</th><th>En 12 meses</th></tr></thead><tbody id="abVenc"></tbody></table></div></div>
+      <p class="note" id="abMostrando" style="margin:6px 0 0;"></p>
+
+      <div class="ab-blk">
+        <h3>Resumen del mes</h3>
+        <div class="kpis" id="abKpis" style="margin-top:10px;"></div>
+        <div class="grid-2" style="margin-top:20px;">
+          <div><div class="tblwrap"><table><thead><tr><th>Sector</th><th>Contratos</th><th>Estac.</th><th>UF/mes</th><th>$</th><th>UF por estac.</th><th>Antig. prom.</th></tr></thead><tbody id="abTipos"></tbody></table></div>
+            <p class="note" style="margin-top:8px;" id="abCobertura"></p></div>
+          <div><p class="note" style="margin:0 0 8px;" id="abMixNota"></p><div class="chart-box"><canvas id="chartAbMix"></canvas></div></div>
+        </div>
       </div>
-      <div class="grid-2" style="margin-top:22px;">
-        <div><h3>Altas, bajas y retenci&oacute;n (12 meses)</h3>
-          <div class="tblwrap"><table><thead><tr><th>Mes</th><th>Contratos</th><th>Nuevos</th><th>Bajas</th><th>Ret. 3 m</th><th>Ret. 12 m</th></tr></thead><tbody id="abMov"></tbody></table></div></div>
-        <div><h3>Cuadre con R. Parking</h3><p class="note" style="margin:0 0 10px;">Compara el total del detalle con lo registrado en la hoja R. Parking de Ficha Cliente.</p>
-          <div class="tblwrap"><table><thead><tr><th>Mes</th><th>Detalle</th><th>R. Parking</th><th>Diferencia</th></tr></thead><tbody id="abCuadre"></tbody></table></div></div>
+
+      <div class="ab-blk">
+        <h3>Tendencias</h3>
+        <p class="note">Desde el primer mes con abonados. En ingreso, las barras claras son meses futuros ya comprometidos por contrato.</p>
+        <div class="grid-3">
+          <div><h4 style="margin:0 0 8px;font-size:13px;">Ingreso (UF al mes)</h4><div class="chart-box"><canvas id="chartAbEvo"></canvas></div></div>
+          <div><h4 style="margin:0 0 8px;font-size:13px;">Estacionamientos arrendados</h4><div class="chart-box"><canvas id="chartAbUni"></canvas></div></div>
+          <div><h4 style="margin:0 0 8px;font-size:13px;">Tarifa promedio (UF por estacionamiento)</h4><p class="note" style="margin:-4px 0 6px;" id="abTarNota">Con Todos, la l&iacute;nea punteada es el promedio de todos los sectores.</p><div class="chart-box"><canvas id="chartAbTar"></canvas></div></div>
+        </div>
       </div>
+
+      <div class="ab-blk">
+        <h3>Clientes</h3>
+        <p class="note">Nuevos y bajas respecto al mes anterior. Retenci&oacute;n: de los contratos de hace 3 o 12 meses, cu&aacute;ntos siguen facturando. Antig&uuml;edad: desde el inicio del primer contrato de cada cliente.</p>
+        <div class="grid-2">
+          <div><div class="tblwrap"><table><thead><tr><th>Mes</th><th>Contratos</th><th>Nuevos</th><th>Bajas</th><th>Ret. 3 m</th><th>Ret. 12 m</th></tr></thead><tbody id="abMov"></tbody></table></div></div>
+          <div><div class="chart-box"><canvas id="chartAbAnt"></canvas></div><p class="note" style="margin-top:8px;" id="abAntNota"></p></div>
+        </div>
+      </div>
+
+      <div class="ab-blk">
+        <h3>Riesgo</h3>
+        <div class="grid-2">
+          <div><h4 style="margin:0 0 6px;font-size:13px;">Contratos que terminan</h4><p class="note" style="margin:0 0 10px;" id="abVencNota"></p>
+            <div class="tblwrap"><table><thead><tr><th>Sector</th><th>En 3 meses</th><th>En 6 meses</th><th>En 12 meses</th></tr></thead><tbody id="abVenc"></tbody></table></div></div>
+          <div><h4 style="margin:0 0 6px;font-size:13px;">Concentraci&oacute;n del ingreso</h4><p class="note" style="margin:0;" id="abConcNota"></p>
+            <div class="ab-conc" id="abConc"></div><div class="ab-legend" id="abConcLeg"></div></div>
+        </div>
+      </div>
+
+      <div class="ab-blk">
+        <details class="ab-ctrl"><summary>Control: cuadre con R. Parking (12 meses)</summary>
+          <p class="note" style="margin:0 0 10px;">Compara el total del detalle con lo registrado en la hoja R. Parking de Ficha Cliente.</p>
+          <div class="tblwrap"><table><thead><tr><th>Mes</th><th>Detalle</th><th>R. Parking</th><th>Diferencia</th></tr></thead><tbody id="abCuadre"></tbody></table></div>
+        </details>
+      </div>
+
       <div class="ab-lock" id="abLock">
         <h3 style="margin-top:0;">&#128274; Detalle con nombres</h3>
         <p class="note" style="margin:0 0 10px;">Solo para personas autorizadas. Los datos est&aacute;n cifrados y se abren en este navegador con la clave; la clave no se env&iacute;a a ning&uacute;n lado.</p>
         <div id="abLockForm" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="password" id="abClave" placeholder="Clave" autocomplete="current-password">
+          <input type="password" id="abClave" placeholder="Clave" autocomplete="current-password" aria-label="Clave">
           <button type="button" class="pill" id="abAbrir">Ver detalle</button>
-          <span class="note" style="margin:0;" id="abLockMsg"></span>
+          <span class="note" style="margin:0;" id="abLockMsg" role="status"></span>
         </div>
         <div id="abDetalle" style="display:none;">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-            <input type="search" id="abBuscar" placeholder="Buscar arrendatario&hellip;">
-            <span class="note" style="margin:0;" id="abDetNota"></span>
-            <button type="button" class="pill" id="abCerrar">Cerrar detalle</button>
+          <div class="ab-tabs" id="abTabs" role="tablist">
+            <button type="button" data-t="contratos" class="on">Contratos</button>
+            <button type="button" data-t="ranking">Ranking estacionamiento</button>
+            <button type="button" data-t="terminan">Terminan pronto</button>
+            <button type="button" id="abCerrar" style="margin-left:auto;">Cerrar detalle</button>
           </div>
-          <div class="scroll" style="max-height:420px;"><table class="ab-sort"><thead><tr id="abDetHead"></tr></thead><tbody id="abDetBody"></tbody></table></div>
-          <div class="grid-2" style="margin-top:18px;">
-            <div><h3>Top 10 del mes</h3><div class="tblwrap"><table><thead><tr><th>#</th><th>Arrendatario</th><th>Tipo</th><th>UF</th><th>% del total</th></tr></thead><tbody id="abTop"></tbody></table></div></div>
-            <div><h3>Terminan en los pr&oacute;ximos 3 meses</h3><p class="note" style="margin:0 0 8px;">Seg&uacute;n contrato (t&eacute;rmino anticipado si existe). Conviene contactarlos antes para renovar.</p><div class="scroll" style="max-height:340px;"><table><thead><tr><th>Arrendatario</th><th>Tipo</th><th>Termina</th><th>UF/mes</th></tr></thead><tbody id="abVence"></tbody></table></div></div>
+          <div data-panel="contratos">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+              <input type="search" id="abBuscar" placeholder="Buscar arrendatario&hellip;" aria-label="Buscar arrendatario">
+              <span class="note" style="margin:0;" id="abDetNota"></span>
+            </div>
+            <div class="scroll" style="max-height:440px;"><table class="ab-sort"><thead><tr id="abDetHead"></tr></thead><tbody id="abDetBody"></tbody></table></div>
+          </div>
+          <div data-panel="ranking" style="display:none;">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+              <div class="ab-seg" id="abRankOrden"><button type="button" data-o="uf" class="on">Por monto</button><button type="button" data-o="ant">Por antig&uuml;edad</button></div>
+              <span class="note" style="margin:0;" id="abRankNota"></span>
+            </div>
+            <div class="scroll" style="max-height:440px;"><table><thead><tr><th>#</th><th>Arrendatario</th><th>Estac.</th><th>UF/mes</th><th>UF por estac.</th><th>% del ingreso estac.</th><th>Antig&uuml;edad</th><th>Termina</th></tr></thead><tbody id="abRank"></tbody></table></div>
+          </div>
+          <div data-panel="terminan" style="display:none;">
+            <p class="note" style="margin:0 0 10px;" id="abTermNota"></p>
+            <div class="scroll" style="max-height:440px;"><table><thead><tr><th>Arrendatario</th><th>Sector</th><th>Termina</th><th>Estac.</th><th>UF/mes</th><th>Antig&uuml;edad</th></tr></thead><tbody id="abVence"></tbody></table></div>
           </div>
         </div>
       </div>
@@ -940,24 +1007,43 @@ function renderAll(){
 
 /* ---------- N-11 abonados ---------- */
 var AB_BLOQ = ['Estacionamiento', 'Oficinas', 'Residencial'];
-var abRes = null, abDet = null, abErr = null, abMes = null, abSort = {col: 9, asc: false};
-var chartAbEvo = null, chartAbMix = null;
+var AB_VAR = ['--seq-500', '--accent', '--seq-250'];
+var abRes = null, abDet = null, abErr = null, abMes = null, abSector = 'todos', abTab = 'contratos', abRankOrden = 'uf';
+var abSort = {col: 10, asc: false}, abCharts = {};
 function abEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-function abUF(v){ return v==null||!isFinite(v) ? '–' : v.toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})+' UF'; }
+function abUF(v, d){ return v==null||!isFinite(v) ? '–' : v.toLocaleString('es-CL',{minimumFractionDigits:(d==null?1:d),maximumFractionDigits:(d==null?1:d)})+' UF'; }
 function abPct(v){ return v==null||!isFinite(v) ? '–' : Math.round(v*100)+'%'; }
+function abNum(v){ return v==null||!isFinite(v) ? '–' : Math.round(v).toLocaleString('es-CL'); }
+function abMeses(v){ if(v==null||!isFinite(v)) return '–'; v=Math.round(v); return v<12 ? v+' m' : (v/12).toLocaleString('es-CL',{maximumFractionDigits:1})+' años'; }
 function abFecha(iso){ return iso ? iso.split('-').reverse().join('-') : ''; }
-function abMesNom(m){ var n=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return n[Number(m.slice(5,7))-1]+'-'+m.slice(0,4); }
+function abMesNom(m){ var n=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return n[Number(m.slice(5,7))-1]+'-'+m.slice(2,4); }
+function abMesLargo(m){ var n=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; return n[Number(m.slice(5,7))-1]+' '+m.slice(0,4); }
 function abMesObj(m){ return abRes ? abRes.meses.filter(function(x){ return x.m===m; })[0] : null; }
-function abSum(mo, j){ return mo ? mo.b.reduce(function(a,b){ return a+(b[j]||0); },0) : 0; }
-function abMovSum(mo, j){ if(!mo||!mo.mov) return null; var t=0, ok=false; mo.mov.forEach(function(r){ if(r[j]!=null){ t+=r[j]; ok=true; } }); return ok? t : null; }
+function abMesMas(m, k){ var y=Number(m.slice(0,4)), mo=Number(m.slice(5,7))-1+k; y+=Math.floor(mo/12); mo=((mo%12)+12)%12; return y+'-'+('0'+(mo+1)).slice(-2); }
+function abDif(a, b){ return (Number(b.slice(0,4))-Number(a.slice(0,4)))*12 + Number(b.slice(5,7))-Number(a.slice(5,7)); }
+function abBloques(){ return abSector==='todos' ? [0,1,2] : [abSector]; }
+function abCol(i){ return cssVar(AB_VAR[i]); }
+function abHex(c, a){ c=c.trim(); return /^#[0-9a-f]{6}$/i.test(c) ? c+a : c; }
+function abS(mo, j, bl){ if(!mo) return 0; return (bl||abBloques()).reduce(function(a,i){ return a+((mo.b[i]||[])[j]||0); }, 0); }
+function abArr(mo, campo, j, bl){ if(!mo||!mo[campo]) return null; var t=0, ok=false; (bl||abBloques()).forEach(function(i){ var r=mo[campo][i]; if(r && r[j]!=null){ t+=r[j]; ok=true; } }); return ok? t : null; }
 function abRatio(a, b){ return (a==null||b==null||!b) ? null : a/b; }
 function abRotativo(m){ var d=dataByYear[Number(m.slice(0,4))]; if(!d) return null; var x=d.monthly[Number(m.slice(5,7))-1]; return x ? x.cobrado : null; }
-function abMesMas(m, k){ var y=Number(m.slice(0,4)), mo=Number(m.slice(5,7))-1+k; y+=Math.floor(mo/12); mo=((mo%12)+12)%12; return y+'-'+('0'+(mo+1)).slice(-2); }
-function abHex(c, a){ c=c.trim(); if(/^#[0-9a-f]{6}$/i.test(c)) return c+a; return c; }
+function abDraw(id, cfg){ if(abCharts[id]){ abCharts[id].destroy(); } abCharts[id]=new Chart(document.getElementById(id), cfg); }
+function abOpts(yTitle, tip, stacked){ return {animation:false, responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false}, tooltip:{callbacks:{label:tip}}},
+  scales:{x:{stacked:!!stacked, grid:{display:false}, ticks:{color:cssVar('--ink-muted'), maxRotation:0, autoSkip:true, maxTicksLimit:8}},
+          y:{stacked:!!stacked, grid:baseGrid(), border:{display:false}, beginAtZero:true, ticks:{color:cssVar('--ink-muted')}, title:{display:!!yTitle, text:yTitle, color:cssVar('--ink-muted'), font:{size:10}}}}}; }
 
 fetch('data/abonados_resumen.json?t='+Date.now()).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
   .then(function(j){ abRes=j; renderAbonados(); abAutoAbrir(); })
   .catch(function(e){ abErr=e; renderAbonados(); });
+
+function abPintarSector(){
+  var cont=document.getElementById('abSector');
+  var ops=[['todos','Todos','--ink-muted']].concat(AB_BLOQ.map(function(n,i){ return [i,n,AB_VAR[i]]; }));
+  cont.innerHTML=ops.map(function(o){ return '<button type="button" data-s="'+o[0]+'" aria-pressed="'+(String(o[0])===String(abSector))+'" class="'+(String(o[0])===String(abSector)?'on':'')+'" style="--c:var('+o[2]+')"><span class="dot"></span>'+o[1]+'</button>'; }).join('');
+  cont.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ abSector = b.dataset.s==='todos' ? 'todos' : Number(b.dataset.s); renderAbonados(); if(abDet) renderAbDetalle(); }; });
+}
 
 function renderAbonados(){
   var nota=document.getElementById('abNota'), cuerpo=document.getElementById('abCuerpo');
@@ -967,78 +1053,97 @@ function renderAbonados(){
   }
   cuerpo.style.display='';
   var g=new Date(abRes.generadoEn);
-  nota.innerHTML='Contratos de Ficha Cliente, actualizados el <b>'+g.toLocaleDateString('es-CL')+' '+g.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})+'</b>. Se actualizan con el bot&oacute;n de Parking (no cada hora). Montos seg&uacute;n contrato en UF; $ = UF &times; valor UF del mes.';
+  nota.innerHTML='Contratos de Ficha Cliente, actualizados el <b>'+g.toLocaleDateString('es-CL')+' a las '+('0'+g.getHours()).slice(-2)+':'+('0'+g.getMinutes()).slice(-2)+'</b>. Se actualizan con el bot&oacute;n de Parking, no cada hora.';
   var anio=String(anioSeleccionado);
-  var opts=abRes.meses.filter(function(x){ return x.m.slice(0,4)===anio && x.m<=abRes.ref && abSum(x,0)>0; }).map(function(x){ return x.m; });
+  var opts=abRes.meses.filter(function(x){ return x.m.slice(0,4)===anio && x.m<=abRes.ref && abS(x,0,[0,1,2])>0; }).map(function(x){ return x.m; });
   var sel=document.getElementById('abMes');
-  if(!opts.length){ sel.innerHTML=''; document.getElementById('abMesNota').textContent='Sin contratos registrados en '+anio+'.'; return; }
+  abPintarSector();
+  if(!opts.length){ sel.innerHTML=''; document.getElementById('abMostrando').textContent='Sin contratos registrados en '+anio+'.'; return; }
   if(!abMes || opts.indexOf(abMes)<0) abMes=opts[opts.length-1];
-  sel.innerHTML=opts.map(function(m){ return '<option value="'+m+'"'+(m===abMes?' selected':'')+'>'+abMesNom(m)+'</option>'; }).join('');
+  sel.innerHTML=opts.map(function(m){ return '<option value="'+m+'"'+(m===abMes?' selected':'')+'>'+abMesLargo(m)+'</option>'; }).join('');
   sel.onchange=function(){ abMes=sel.value; renderAbonados(); if(abDet) renderAbDetalle(); };
-  var mo=abMesObj(abMes), enCurso=(abMes===abRes.ref);
-  document.getElementById('abMesNota').textContent = enCurso ? 'Mes en curso: los pagos por hora todavía suman.' : '';
+  var bl=abBloques(), mo=abMesObj(abMes), enCurso=(abMes===abRes.ref);
+  var nomSector = abSector==='todos' ? 'todos los sectores' : AB_BLOQ[abSector].toLowerCase();
+  document.getElementById('abMostrando').innerHTML='Mostrando <b>'+nomSector+'</b> en <b>'+abMesLargo(abMes)+'</b>'+(enCurso?' (mes en curso)':'')+'.';
 
-  var clp=abSum(mo,3), uf=abSum(mo,2), n=abSum(mo,0), vig=abSum(mo,1);
-  var rot=abRotativo(abMes), pctFijo=(rot!=null && clp+rot>0) ? clp/(clp+rot) : null;
+  // ---- resumen ----
+  var clp=abS(mo,3), uf=abS(mo,2), n=abS(mo,0), u=abS(mo,4), ufU=abS(mo,5), sinU=abS(mo,6);
+  var tar=abRatio(ufU,u), ufMes=mo.uf;
+  var antS=abArr(mo,'ant',0), antN=abArr(mo,'ant',1), ant12=(abArr(mo,'ant',5)||0)+(abArr(mo,'ant',6)||0);
+  var aplicaMix = (abSector==='todos' || abSector===0);
+  var rot=abRotativo(abMes), pctFijo=(aplicaMix && rot!=null && clp+rot>0) ? clp/(clp+rot) : null;
   document.getElementById('abKpis').innerHTML=[
-    {l:'Ingreso abonados '+abMesNom(abMes), v:fmtCLP(clp), f:abUF(uf)},
-    {l:'Parte fija del ingreso', v:abPct(pctFijo), f: rot!=null ? 'pagos por hora: '+fmtCLP(rot)+(enCurso?' (mes en curso)':'') : 'sin datos de pagos por hora de ese año'},
-    {l:'Contratos', v:n.toLocaleString('es-CL'), f:vig+' vigentes'},
-    {l:'Ticket promedio', v:abUF(n? uf/n : null), f:'por contrato, al mes'},
-    {l:'Concentración', v:abPct(mo.top5), f:'del ingreso en los 5 contratos más grandes · 10 más grandes: '+abPct(mo.top10)},
+    {l:'Ingreso abonados', v:fmtCLP(clp), f:abUF(uf)+' en '+abNum(n)+' contratos'},
+    {l:'Parte fija del ingreso', v:abPct(pctFijo), f: !aplicaMix ? 'solo se compara con Todos o Estacionamiento' : (rot!=null ? 'vs. '+fmtCLP(rot)+' en pagos por hora'+(enCurso?' (mes en curso)':'') : 'sin pagos por hora de ese año')},
+    {l:'Estacionamientos', v:abNum(u), f: sinU ? sinU+' contrato'+(sinU===1?'':'s')+' sin cantidad en Cttos' : 'todos los contratos con cantidad'},
+    {l:'Tarifa promedio', v:abUF(tar,2), f: (tar!=null && ufMes) ? 'aprox. '+fmtCLP(tar*ufMes)+' por estacionamiento' : 'por estacionamiento al mes'},
+    {l:'Antigüedad promedio', v:abMeses(abRatio(antS,antN)), f: antN ? abPct(ant12/antN)+' de los clientes lleva más de 1 año' : ''},
   ].map(function(k){ return '<div class="kpi"><div class="lbl">'+k.l+'</div><div class="val">'+k.v+'</div><div class="foot">'+k.f+'</div></div>'; }).join('');
 
   var tb=document.getElementById('abTipos'); tb.innerHTML='';
-  var filasTipo=[0,1,2].map(function(i){ return {nom:AB_BLOQ[i], b:mo.b[i], mv:(mo.mov||[])[i]||[]}; });
-  filasTipo.push({nom:'<b>Total</b>', b:[n,vig,uf,clp], mv:[abMovSum(mo,0),abMovSum(mo,1),abMovSum(mo,2),abMovSum(mo,3),abMovSum(mo,4),abMovSum(mo,5),abMovSum(mo,6)]});
-  filasTipo.forEach(function(r){
-    tb.innerHTML+='<tr><td>'+r.nom+'</td><td>'+r.b[0]+'</td><td>'+r.b[1]+'</td><td>'+abUF(r.b[2])+'</td><td>'+fmtCLP(r.b[3])+'</td><td>'+abUF(r.b[0]? r.b[2]/r.b[0] : null)+'</td><td>'+(r.mv[1]==null?'–':r.mv[1])+'</td><td>'+(r.mv[2]==null?'–':r.mv[2])+'</td><td>'+abPct(abRatio(r.mv[4],r.mv[3]))+'</td><td>'+abPct(abRatio(r.mv[6],r.mv[5]))+'</td></tr>';
+  [0,1,2].forEach(function(i){
+    var b=mo.b[i]||[], a=(mo.ant||[])[i]||[];
+    tb.innerHTML+='<tr class="'+(abSector===i?'ab-hl':'')+'"><td><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var('+AB_VAR[i]+');margin-right:7px;"></i>'+AB_BLOQ[i]+'</td><td>'+abNum(b[0])+'</td><td>'+abNum(b[4])+'</td><td>'+abUF(b[2])+'</td><td>'+fmtCLP(b[3]||0)+'</td><td>'+abUF(abRatio(b[5],b[4]),2)+'</td><td>'+abMeses(abRatio(a[0],a[1]))+'</td></tr>';
   });
+  var T=[0,1,2];
+  tb.innerHTML+='<tr class="'+(abSector==='todos'?'ab-hl':'')+'"><td><b>Total</b></td><td>'+abNum(abS(mo,0,T))+'</td><td>'+abNum(abS(mo,4,T))+'</td><td>'+abUF(abS(mo,2,T))+'</td><td>'+fmtCLP(abS(mo,3,T))+'</td><td>'+abUF(abRatio(abS(mo,5,T),abS(mo,4,T)),2)+'</td><td>'+abMeses(abRatio(abArr(mo,'ant',0,T),abArr(mo,'ant',1,T)))+'</td></tr>';
+  var sinT=abS(mo,6,T);
+  document.getElementById('abCobertura').textContent = sinT ? 'La tarifa usa solo contratos con cantidad de estacionamientos en Cttos (columna V). Este mes faltan '+sinT+'.' : 'Todos los contratos del mes tienen cantidad de estacionamientos en Cttos.';
 
-  // movimiento 12 meses hasta el mes elegido
-  var tm=document.getElementById('abMov'); tm.innerHTML='';
-  var tc=document.getElementById('abCuadre'); tc.innerHTML='';
+  // ---- movimiento y cuadre ----
+  var tm=document.getElementById('abMov'), tc=document.getElementById('abCuadre'); tm.innerHTML=''; tc.innerHTML='';
   for(var k=11;k>=0;k--){
-    var mm=abMesMas(abMes,-k), x=abMesObj(mm); if(!x || abSum(x,0)===0) continue;
-    tm.innerHTML+='<tr><td>'+abMesNom(mm)+'</td><td>'+abSum(x,0)+'</td><td>'+(abMovSum(x,1)==null?'–':abMovSum(x,1))+'</td><td>'+(abMovSum(x,2)==null?'–':abMovSum(x,2))+'</td><td>'+abPct(abRatio(abMovSum(x,4),abMovSum(x,3)))+'</td><td>'+abPct(abRatio(abMovSum(x,6),abMovSum(x,5)))+'</td></tr>';
-    var det=abSum(x,3), rp=(x.rp||[]).reduce(function(a,v){ return v==null? a : (a==null? v : a+v); }, null);
-    var dif=(rp==null)? null : det-rp;
-    var chip = dif==null ? '–' : (Math.abs(dif)<1000 ? '<span class="chip pos">cuadra</span>' : '<span class="chip neg">'+fmtCLP(dif)+'</span>');
-    tc.innerHTML+='<tr><td>'+abMesNom(mm)+'</td><td>'+fmtCLP(det)+'</td><td>'+(rp==null?'–':fmtCLP(rp))+'</td><td>'+chip+'</td></tr>';
+    var mm=abMesMas(abMes,-k), x=abMesObj(mm); if(!x || abS(x,0,T)===0) continue;
+    var nv=abArr(x,'mov',1), bj=abArr(x,'mov',2);
+    tm.innerHTML+='<tr class="'+(mm===abMes?'ab-hl':'')+'"><td>'+abMesNom(mm)+'</td><td>'+abNum(abS(x,0))+'</td><td>'+(nv==null?'–':nv)+'</td><td>'+(bj==null?'–':bj)+'</td><td>'+abPct(abRatio(abArr(x,'mov',4),abArr(x,'mov',3)))+'</td><td>'+abPct(abRatio(abArr(x,'mov',6),abArr(x,'mov',5)))+'</td></tr>';
+    var det=abS(x,3,T), rp=(x.rp||[]).reduce(function(a,v){ return v==null? a : (a==null? v : a+v); }, null), dif=(rp==null)? null : det-rp;
+    tc.innerHTML+='<tr><td>'+abMesNom(mm)+'</td><td>'+fmtCLP(det)+'</td><td>'+(rp==null?'–':fmtCLP(rp))+'</td><td>'+(dif==null?'–':(Math.abs(dif)<1000?'<span class="chip pos">cuadra</span>':'<span class="chip neg">'+fmtCLP(dif)+'</span>'))+'</td></tr>';
   }
 
-  // vencimientos (respecto al mes actual real)
+  // ---- riesgo ----
   var tv=document.getElementById('abVenc'); tv.innerHTML='';
   var tot={m3:[0,0],m6:[0,0],m12:[0,0]};
-  (abRes.venc||[]).forEach(function(v,i){
+  bl.forEach(function(i){ var v=(abRes.venc||[])[i]; if(!v) return;
     ['m3','m6','m12'].forEach(function(c){ tot[c][0]+=v[c][0]; tot[c][1]+=v[c][1]; });
-    tv.innerHTML+='<tr><td>'+AB_BLOQ[i]+'</td>'+['m3','m6','m12'].map(function(c){ return '<td>'+v[c][0]+' · '+abUF(v[c][1])+'</td>'; }).join('')+'</tr>';
-  });
-  tv.innerHTML+='<tr><td><b>Total</b></td>'+['m3','m6','m12'].map(function(c){ return '<td><b>'+tot[c][0]+' · '+abUF(tot[c][1])+'</b></td>'; }).join('')+'</tr>';
-  document.getElementById('abVencNota').innerHTML='Contratos que facturan en '+abMesNom(abRes.ref)+' y cuyo plazo termina en ese horizonte (cantidad · UF al mes). Muchos abonos de estacionamiento son de plazo corto y se renuevan: para ver cu&aacute;ntos se van de verdad, mira la retenci&oacute;n.';
+    tv.innerHTML+='<tr><td>'+AB_BLOQ[i]+'</td>'+['m3','m6','m12'].map(function(c){ return '<td>'+v[c][0]+' <span class="note" style="margin:0;">('+abUF(v[c][1])+')</span></td>'; }).join('')+'</tr>'; });
+  if(bl.length>1) tv.innerHTML+='<tr><td><b>Total</b></td>'+['m3','m6','m12'].map(function(c){ return '<td><b>'+tot[c][0]+'</b> <span class="note" style="margin:0;">('+abUF(tot[c][1])+')</span></td>'; }).join('')+'</tr>';
+  document.getElementById('abVencNota').innerHTML='Contratos que facturan en '+abMesLargo(abRes.ref)+' y cuyo plazo termina en ese horizonte (cantidad y UF al mes). Los abonos de estacionamiento suelen ser de plazo corto y se renuevan; la retenci&oacute;n muestra cu&aacute;ntos se van de verdad.';
+  var t5=mo.top5, t10=mo.top10;
+  var cc=[cssVar('--seq-600'), cssVar('--seq-400'), cssVar('--seq-100')];
+  document.getElementById('abConc').innerHTML = t5==null ? '' : '<span style="width:'+(t5*100)+'%;background:'+cc[0]+'"></span><span style="width:'+((t10-t5)*100)+'%;background:'+cc[1]+'"></span><span style="width:'+((1-t10)*100)+'%;background:'+cc[2]+'"></span>';
+  document.getElementById('abConcLeg').innerHTML = t5==null ? '' : '<span><i style="background:'+cc[0]+'"></i>5 contratos más grandes: '+abPct(t5)+'</span><span><i style="background:'+cc[1]+'"></i>6.º al 10.º: '+abPct(t10-t5)+'</span><span><i style="background:'+cc[2]+'"></i>resto ('+Math.max(0,(mo.nc||0)-10)+' contratos): '+abPct(1-t10)+'</span>';
+  document.getElementById('abConcNota').textContent='Qué parte del ingreso de abonados de '+abMesLargo(abMes)+' depende de pocos contratos (todos los sectores).';
 
-  // graficos
-  var cols=[cssVar('--seq-500'), cssVar('--accent'), cssVar('--seq-250')];
-  var primero=abRes.meses.filter(function(x){ return abSum(x,0)>0; })[0];
-  var hasta=abMesMas(abRes.ref,12);
-  var evo=abRes.meses.filter(function(x){ return primero && x.m>=primero.m && x.m<=hasta; });
-  var labelsEvo=evo.map(function(x){ return abMesNom(x.m); });
-  var dsEvo=[0,1,2].map(function(i){ return {label:AB_BLOQ[i], data:evo.map(function(x){ return Math.round(x.b[i][2]*10)/10; }),
-    backgroundColor:evo.map(function(x){ return x.m>abRes.ref ? abHex(cols[i],'55') : cols[i]; }), borderWidth:0, borderRadius:2}; });
+  // ---- graficos ----
+  var primero=abRes.meses.filter(function(x){ return abS(x,0,T)>0; })[0];
+  var hist=abRes.meses.filter(function(x){ return primero && x.m>=primero.m && x.m<=abRes.ref; });
+  var fut=abRes.meses.filter(function(x){ return primero && x.m>=primero.m && x.m<=abMesMas(abRes.ref,12); });
   var mesesAnio=[]; for(var q=1;q<=12;q++){ var mq=anio+'-'+('0'+q).slice(-2); if(mq<=abRes.ref && abMesObj(mq)) mesesAnio.push(mq); }
-  var dsMix=[{label:'Abonados (fijo)', data:mesesAnio.map(function(m){ return abSum(abMesObj(m),3); }), backgroundColor:cols[0], borderWidth:0, borderRadius:2},
-             {label:'Pagos por hora (variable)', data:mesesAnio.map(function(m){ var r=abRotativo(m); return r==null?0:r; }), backgroundColor:cssVar('--accent'), borderWidth:0, borderRadius:2}];
+  document.getElementById('abMixNota').innerHTML = aplicaMix ? 'Ingreso mensual del estacionamiento en '+anio+': abonados '+(abSector===0?'de estacionamiento ':'')+'(fijo) vs. pagos por hora (variable).' : 'Fijo vs. variable se compara con Todos o Estacionamiento, porque los pagos por hora son del estacionamiento.';
   requestAnimationFrame(function(){
-    if(chartAbEvo){ chartAbEvo.destroy(); chartAbEvo=null; }
-    if(chartAbMix){ chartAbMix.destroy(); chartAbMix=null; }
-    var baseOpts=function(yTitle, tip){ return {animation:false, responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:true, labels:{color:cssVar('--ink-2'), boxWidth:10, font:{size:10}}}, tooltip:{callbacks:{label:tip}}},
-      scales:{x:{stacked:true, grid:{display:false}, ticks:{color:cssVar('--ink-muted'), maxRotation:60, autoSkip:true}},
-              y:{stacked:true, grid:baseGrid(), border:{display:false}, beginAtZero:true, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:yTitle, color:cssVar('--ink-muted'), font:{size:10}}}}}; };
-    chartAbEvo=new Chart(document.getElementById('chartAbEvo'), {type:'bar', data:{labels:labelsEvo, datasets:dsEvo},
-      options:baseOpts('UF por mes', function(c){ var fut=evo[c.dataIndex].m>abRes.ref; return c.dataset.label+': '+abUF(c.parsed.y)+(fut?' (comprometido)':''); })});
-    chartAbMix=new Chart(document.getElementById('chartAbMix'), {type:'bar', data:{labels:mesesAnio.map(abMesNom), datasets:dsMix},
-      options:baseOpts('$ por mes', function(c){ var a=dsMix[0].data[c.dataIndex], b=dsMix[1].data[c.dataIndex]; return c.dataset.label+': '+fmtCLP(c.parsed.y)+' ('+abPct((a+b)? c.parsed.y/(a+b) : null)+')'; })});
+    var dsSector=function(src, j, colorFn, redondeo){ return bl.map(function(i){ return {label:AB_BLOQ[i], data:src.map(function(x){ var v=(x.b[i]||[])[j]||0; return redondeo? Math.round(v*redondeo)/redondeo : v; }), backgroundColor:colorFn? src.map(function(x){ return colorFn(i,x); }) : abCol(i), borderWidth:0, borderRadius:2}; }); };
+    abDraw('chartAbEvo', {type:'bar', data:{labels:fut.map(function(x){ return abMesNom(x.m); }), datasets:dsSector(fut, 2, function(i,x){ return x.m>abRes.ref ? abHex(abCol(i),'55') : abCol(i); }, 10)},
+      options:abOpts('', function(c){ return c.dataset.label+': '+abUF(c.parsed.y)+(fut[c.dataIndex].m>abRes.ref?' (comprometido)':''); }, true)});
+    abDraw('chartAbUni', {type:'bar', data:{labels:hist.map(function(x){ return abMesNom(x.m); }), datasets:dsSector(hist, 4)},
+      options:abOpts('', function(c){ return c.dataset.label+': '+abNum(c.parsed.y)+' estac.'; }, true)});
+    var tarDs=bl.map(function(i){ return {label:AB_BLOQ[i], data:hist.map(function(x){ var b=x.b[i]||[]; return b[4]? Math.round(b[5]/b[4]*100)/100 : null; }), borderColor:abCol(i), backgroundColor:abCol(i), borderWidth:2, pointRadius:0, tension:.25, spanGaps:true}; });
+    if(bl.length>1) tarDs.push({label:'Total', data:hist.map(function(x){ var uu=abS(x,4,T); return uu? Math.round(abS(x,5,T)/uu*100)/100 : null; }), borderColor:cssVar('--ink'), borderDash:[5,4], borderWidth:2, pointRadius:0, tension:.25});
+    document.getElementById('abTarNota').style.display = bl.length>1 ? '' : 'none';
+    abDraw('chartAbTar', {type:'line', data:{labels:hist.map(function(x){ return abMesNom(x.m); }), datasets:tarDs},
+      options:abOpts('', function(c){ return c.dataset.label+': '+abUF(c.parsed.y,2)+' por estac.'; }, false)});
+    var tr=[2,3,4,5,6].map(function(j){ return abArr(mo,'ant',j)||0; });
+    abDraw('chartAbAnt', {type:'bar', data:{labels:['< 3 meses','3 a 6 meses','6 a 12 meses','1 a 2 años','más de 2 años'], datasets:[{label:'Clientes', data:tr, backgroundColor:[cssVar('--seq-100'),cssVar('--seq-250'),cssVar('--seq-400'),cssVar('--seq-500'),cssVar('--seq-600')], borderWidth:0, borderRadius:3}]},
+      options:(function(){ var o=abOpts('', function(c){ var t=tr.reduce(function(a,b){return a+b;},0); return abNum(c.parsed.x)+' clientes ('+abPct(t? c.parsed.x/t : null)+')'; }, false); o.indexAxis='y'; o.scales.x.grid=baseGrid(); o.scales.y.grid={display:false}; return o; })()});
+    var mix=[{label:'Abonados (fijo)', data:mesesAnio.map(function(m){ return abS(abMesObj(m),3); }), backgroundColor:abCol(0), borderWidth:0, borderRadius:2},
+             {label:'Pagos por hora (variable)', data:mesesAnio.map(function(m){ var r=abRotativo(m); return r==null?0:r; }), backgroundColor:cssVar('--ink-muted'), borderWidth:0, borderRadius:2}];
+    if(aplicaMix){
+      document.getElementById('chartAbMix').style.display='';
+      var om=abOpts('', function(c){ var a=mix[0].data[c.dataIndex], b=mix[1].data[c.dataIndex]; return c.dataset.label+': '+fmtCLP(c.parsed.y)+' ('+abPct((a+b)? c.parsed.y/(a+b) : null)+')'; }, true);
+      om.plugins.legend={display:true, position:'bottom', labels:{color:cssVar('--ink-2'), boxWidth:10, font:{size:10}}};
+      abDraw('chartAbMix', {type:'bar', data:{labels:mesesAnio.map(abMesNom), datasets:mix}, options:om});
+    } else { if(abCharts.chartAbMix){ abCharts.chartAbMix.destroy(); delete abCharts.chartAbMix; } document.getElementById('chartAbMix').style.display='none'; }
+    var ant=abRatio(abArr(mo,'ant',0),abArr(mo,'ant',1));
+    document.getElementById('abAntNota').textContent = abArr(mo,'ant',1) ? abNum(abArr(mo,'ant',1))+' clientes en '+abMesLargo(abMes)+'; antigüedad promedio '+abMeses(ant)+'.' : '';
   });
 }
 
@@ -1055,12 +1160,19 @@ async function abDescifrar(clave){
   var kEnc=await crypto.subtle.importKey('raw', bits.slice(0,32), {name:'AES-CBC'}, false, ['decrypt']);
   return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-CBC', iv:iv}, kEnc, ct)));
 }
+function abPrepararDetalle(d){
+  // antiguedad por cliente (sector + nombre) desde el inicio de su primer contrato
+  var primero={}; var norm=function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
+  d.filas.forEach(function(f){ var k=f[1]+'|'+norm(f[3]); var ini=(f[5]||f[0]+'-01').slice(0,7); if(!primero[k] || ini<primero[k]) primero[k]=ini; });
+  d.filas.forEach(function(f){ var k=f[1]+'|'+norm(f[3]); f.antig=Math.max(0, abDif(primero[k], f[0])); });
+  return d;
+}
 async function abAbrir(clave, silencioso){
   var msg=document.getElementById('abLockMsg');
-  if(!window.crypto || !crypto.subtle){ msg.textContent='Este navegador no permite descifrar (abre el reporte con https).'; return; }
+  if(!window.crypto || !crypto.subtle){ msg.textContent='Este navegador no permite descifrar. Abre el reporte con https.'; return; }
   if(!silencioso) msg.textContent='Descifrando…';
   try{
-    abDet=await abDescifrar(clave);
+    abDet=abPrepararDetalle(await abDescifrar(clave));
     try{ sessionStorage.setItem('abClave', clave); }catch(err){}
     msg.textContent=''; document.getElementById('abClave').value='';
     document.getElementById('abLockForm').style.display='none';
@@ -1079,31 +1191,40 @@ document.getElementById('abCerrar').addEventListener('click', function(){
   document.getElementById('abDetalle').style.display='none'; document.getElementById('abLockForm').style.display='flex';
 });
 document.getElementById('abBuscar').addEventListener('input', function(){ renderAbDetalle(); });
-var AB_COLS=[['Tipo',1],['ID',2],['Arrendatario',3],['Facturación',4],['Inicio',5],['Término',6],['T. anticipado',7],['Estado',8],['UF',9],['$',10]];
+document.querySelectorAll('#abTabs button[data-t]').forEach(function(b){ b.addEventListener('click', function(){ abTab=b.dataset.t; renderAbDetalle(); }); });
+document.querySelectorAll('#abRankOrden button').forEach(function(b){ b.addEventListener('click', function(){ abRankOrden=b.dataset.o; renderAbDetalle(); }); });
+var AB_COLS=[['Sector',1],['ID',2],['Arrendatario',3],['Facturación',4],['Inicio',5],['Término',6],['T. anticipado',7],['Estado',8],['Estac.',11],['UF',9],['$',10],['Antigüedad','antig']];
 function renderAbDetalle(){
   if(!abDet || !abMes) return;
+  document.querySelectorAll('#abTabs button[data-t]').forEach(function(b){ b.classList.toggle('on', b.dataset.t===abTab); b.setAttribute('aria-selected', b.dataset.t===abTab); });
+  document.querySelectorAll('#abDetalle [data-panel]').forEach(function(p){ p.style.display = p.dataset.panel===abTab ? '' : 'none'; });
+  var bl=abBloques(), g=new Date(abDet.generadoEn);
+  // contratos
   var q=(document.getElementById('abBuscar').value||'').toLowerCase();
-  var rows=abDet.filas.filter(function(f){ return f[0]===abMes && (!q || String(f[3]).toLowerCase().indexOf(q)>=0); });
+  var rows=abDet.filas.filter(function(f){ return f[0]===abMes && bl.indexOf(f[1]-1)>=0 && (!q || String(f[3]).toLowerCase().indexOf(q)>=0); });
   var c=AB_COLS[abSort.col][1];
   rows.sort(function(a,b){ var x=a[c], y=b[c]; if(x==null) x=''; if(y==null) y=''; var r=(typeof x==='number' && typeof y==='number')? x-y : String(x).localeCompare(String(y),'es'); return abSort.asc? r : -r; });
   document.getElementById('abDetHead').innerHTML=AB_COLS.map(function(h,i){ return '<th data-i="'+i+'" class="'+(i===abSort.col?'on'+(abSort.asc?' asc':''):'')+'">'+h[0]+'</th>'; }).join('');
-  document.querySelectorAll('#abDetHead th').forEach(function(th){ th.onclick=function(){ var i=Number(th.dataset.i); if(abSort.col===i) abSort.asc=!abSort.asc; else { abSort.col=i; abSort.asc=(i!==8 && i!==9); } renderAbDetalle(); }; });
+  document.querySelectorAll('#abDetHead th').forEach(function(th){ th.onclick=function(){ var i=Number(th.dataset.i); if(abSort.col===i) abSort.asc=!abSort.asc; else { abSort.col=i; abSort.asc=[8,9,10,11].indexOf(i)<0; } renderAbDetalle(); }; });
   document.getElementById('abDetBody').innerHTML=rows.map(function(f){
     var est=String(f[8]||''), chip=est.toLowerCase()==='vigente' ? est : '<span class="chip neg">'+abEsc(est)+'</span>';
-    return '<tr><td>'+AB_BLOQ[f[1]-1]+'</td><td>'+abEsc(f[2])+'</td><td>'+abEsc(f[3])+'</td><td>'+abEsc(f[4])+'</td><td>'+abFecha(f[5])+'</td><td>'+abFecha(f[6])+'</td><td>'+abFecha(f[7])+'</td><td>'+chip+'</td><td>'+abUF(f[9])+'</td><td>'+fmtCLP(f[10])+'</td></tr>';
+    return '<tr><td>'+AB_BLOQ[f[1]-1]+'</td><td>'+abEsc(f[2])+'</td><td class="nom">'+abEsc(f[3])+'</td><td>'+abEsc(f[4])+'</td><td>'+abFecha(f[5])+'</td><td>'+abFecha(f[6])+'</td><td>'+abFecha(f[7])+'</td><td>'+chip+'</td><td>'+abNum(f[11])+'</td><td>'+abUF(f[9])+'</td><td>'+fmtCLP(f[10])+'</td><td>'+abMeses(f.antig)+'</td></tr>';
   }).join('');
-  var g=new Date(abDet.generadoEn);
-  document.getElementById('abDetNota').textContent=rows.length+' contratos en '+abMesNom(abMes)+(q?' (filtrados)':'')+' · datos del '+g.toLocaleDateString('es-CL');
-  // top 10 del mes (por arrendatario + tipo)
-  var mesRows=abDet.filas.filter(function(f){ return f[0]===abMes; }), agg={}, totUF=0;
-  mesRows.forEach(function(f){ var k=f[1]+'|'+f[3]; agg[k]=(agg[k]||0)+(f[9]||0); if(f[9]>0) totUF+=f[9]; });
-  var top=Object.keys(agg).map(function(k){ return {k:k, uf:agg[k]}; }).sort(function(a,b){ return b.uf-a.uf; }).slice(0,10);
-  document.getElementById('abTop').innerHTML=top.map(function(t,i){ var p=t.k.split('|'); return '<tr><td>'+(i+1)+'</td><td>'+abEsc(p.slice(1).join('|'))+'</td><td>'+AB_BLOQ[Number(p[0])-1]+'</td><td>'+abUF(t.uf)+'</td><td>'+abPct(totUF? t.uf/totUF : null)+'</td></tr>'; }).join('');
-  // terminan en 3 meses (respecto al mes actual real)
+  document.getElementById('abDetNota').textContent=rows.length+' contratos en '+abMesLargo(abMes)+(q?' que coinciden con la búsqueda':'')+'. Datos del '+g.toLocaleDateString('es-CL')+'.';
+  // ranking estacionamiento (siempre solo estacionamiento)
+  document.querySelectorAll('#abRankOrden button').forEach(function(b){ b.classList.toggle('on', b.dataset.o===abRankOrden); });
+  var agg={}, totUF=0;
+  abDet.filas.forEach(function(f){ if(f[0]!==abMes || f[1]!==1) return; var k=String(f[3]||'').toLowerCase().replace(/\s+/g,' ').trim();
+    var a=agg[k]||(agg[k]={nom:f[3], uf:0, u:0, ant:0, fin:''}); a.uf+=(f[9]||0); a.u+=(f[11]||0); a.ant=Math.max(a.ant, f.antig||0); var fin=f[7]||f[6]||''; if(fin>a.fin) a.fin=fin; if(f[9]>0) totUF+=f[9]; });
+  var rk=Object.keys(agg).map(function(k){ return agg[k]; }).sort(function(a,b){ return abRankOrden==='uf' ? b.uf-a.uf : (b.ant-a.ant || b.uf-a.uf); });
+  document.getElementById('abRank').innerHTML=rk.map(function(a,i){ return '<tr><td>'+(i+1)+'</td><td class="nom">'+abEsc(a.nom)+'</td><td>'+abNum(a.u||null)+'</td><td>'+abUF(a.uf)+'</td><td>'+abUF(a.u? a.uf/a.u : null,2)+'</td><td>'+abPct(totUF? a.uf/totUF : null)+'</td><td>'+abMeses(a.ant)+'</td><td>'+abFecha(a.fin)+'</td></tr>'; }).join('');
+  document.getElementById('abRankNota').textContent=rk.length+' clientes de estacionamiento en '+abMesLargo(abMes)+' (sin oficinas ni residencial, sin importar el sector elegido arriba).';
+  // terminan pronto (respecto al mes actual real)
   var ref=abRes? abRes.ref : abMes, lim=abMesMas(ref,2);
-  var vence=abDet.filas.filter(function(f){ if(f[0]!==ref) return false; var fin=f[7]||f[6]; return fin && fin.slice(0,7)>=ref && fin.slice(0,7)<=lim; })
-    .sort(function(a,b){ return String(a[7]||a[6]).localeCompare(String(b[7]||b[6])); });
-  document.getElementById('abVence').innerHTML = vence.length ? vence.map(function(f){ return '<tr><td>'+abEsc(f[3])+'</td><td>'+AB_BLOQ[f[1]-1]+'</td><td>'+abFecha(f[7]||f[6])+'</td><td>'+abUF(f[9])+'</td></tr>'; }).join('') : '<tr><td colspan="4">Ninguno.</td></tr>';
+  var vence=abDet.filas.filter(function(f){ if(f[0]!==ref || bl.indexOf(f[1]-1)<0) return false; var fin=f[7]||f[6]; return fin && fin.slice(0,7)>=ref && fin.slice(0,7)<=lim; })
+    .sort(function(a,b){ return String(a[7]||a[6]).localeCompare(String(b[7]||b[6])) || (b[9]-a[9]); });
+  document.getElementById('abTermNota').textContent=vence.length+' contratos terminan entre '+abMesLargo(ref)+' y '+abMesLargo(lim)+' según contrato (término anticipado si existe). Conviene contactarlos antes para renovar.';
+  document.getElementById('abVence').innerHTML = vence.length ? vence.map(function(f){ return '<tr><td class="nom">'+abEsc(f[3])+'</td><td>'+AB_BLOQ[f[1]-1]+'</td><td>'+abFecha(f[7]||f[6])+'</td><td>'+abNum(f[11])+'</td><td>'+abUF(f[9])+'</td><td>'+abMeses(f.antig)+'</td></tr>'; }).join('') : '<tr><td colspan="6">Ninguno en este período.</td></tr>';
 }
 /* ---------- N-11 fin ---------- */
 
