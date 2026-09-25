@@ -251,12 +251,14 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
     <h2><span class="code">N&middot;05</span>Hora pico</h2>
     <p class="note" style="margin-bottom:6px;">Mostrando: <b id="horaPicoLabel">A&ntilde;o completo</b></p>
     <div id="horaPicoFiltro"></div>
+    <div id="horaPicoDias" class="pillrow" style="margin-bottom:10px;"></div>
+    <p class="note" id="horaPicoNota" style="margin:0 0 12px;"></p>
     <div class="grid-2">
-      <div><h3>Hora del pago</h3><p class="note" style="margin:0 0 10px;">Momento del cobro seg&uacute;n &ldquo;Fecha Creaci&oacute;n&rdquo;.</p><div class="chart-box"><canvas id="chartHoraPico"></canvas></div></div>
+      <div><h3>Hora del pago</h3><p class="note" style="margin:0 0 10px;">Pagos promedio en un d&iacute;a, por hora del cobro (&ldquo;Fecha Creaci&oacute;n&rdquo;).</p><div class="chart-box"><canvas id="chartHoraPico"></canvas></div></div>
       <div><h3>Ocupaci&oacute;n estimada</h3><p class="note" style="margin:0 0 10px;">Asume pago al salir; los pagos con tarifa m&aacute;xima usan una duraci&oacute;n m&iacute;nima estimada, ya que su duraci&oacute;n real no se puede calcular exacta.</p><div class="chart-box"><canvas id="chartHoraPicoOcup"></canvas></div></div>
     </div>
     <div class="scroll" style="max-height:220px;margin-top:16px;">
-      <table><thead><tr><th>Hora</th><th>Pagos</th><th>Ocupaci&oacute;n (est.)</th></tr></thead>
+      <table><thead><tr><th>Hora</th><th>Pagos prom./d&iacute;a</th><th>Pagos total</th><th>Ocupaci&oacute;n prom./d&iacute;a</th><th>Ocupaci&oacute;n total</th></tr></thead>
       <tbody id="tbodyHoraPico"></tbody></table>
     </div>
   </div>
@@ -285,13 +287,17 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
 
   <div class="card" id="sec-heatmap">
     <h2><span class="code">N&middot;08</span>Mapa de calor &mdash; hora &times; d&iacute;a</h2>
-    <p class="note">Cruce de hora del pago con d&iacute;a de semana, a&ntilde;o completo.</p>
+    <p class="note">Cruce de hora del pago con d&iacute;a de semana. Por defecto muestra el promedio de un d&iacute;a t&iacute;pico (ej. &ldquo;un lunes a las 9:00&rdquo;); el n&uacute;mero junto a cada d&iacute;a es cu&aacute;ntos d&iacute;as de ese tipo entran en el promedio. El filtro aplica tambi&eacute;n a N&middot;09.</p>
+    <p class="note" style="margin-bottom:6px;">Mostrando: <b id="heatLabel">A&ntilde;o completo</b></p>
+    <div id="heatFiltro"></div>
+    <div id="heatModo" class="pillrow" style="margin-bottom:10px;"></div>
+    <p class="note" id="heatNota" style="margin:0 0 12px;"></p>
     <div class="tblwrap"><div id="heatmapReal"></div></div>
   </div>
 
   <div class="card" id="sec-heatmap-ocupacion">
     <h2><span class="code">N&middot;09</span>Mapa de calor &mdash; ocupaci&oacute;n</h2>
-    <p class="note">Misma estimaci&oacute;n de ocupaci&oacute;n que N&middot;05.</p>
+    <p class="note">Misma estimaci&oacute;n de ocupaci&oacute;n que N&middot;05. Usa el mismo per&iacute;odo y modo elegidos en N&middot;08.</p>
     <div class="tblwrap"><div id="heatmapOcup"></div></div>
   </div>
 
@@ -459,7 +465,7 @@ function poblarSelectMes(){
   if(mesActivo!==null) renderDiaSemana(mesActivo);
 }
 
-/* ---------- filtro de fechas (compartido por N-04, N-05, N-06) ---------- */
+/* ---------- filtro de fechas (compartido por N-04, N-05, N-06, N-08/09) ---------- */
 function fechaToISO(f){var p=f.split('/'); return p[2]+'-'+p[1]+'-'+p[0];}
 function buildDateFilter(containerId, onChange){
   var cont = document.getElementById(containerId);
@@ -565,32 +571,81 @@ document.getElementById('buscar').addEventListener('input', function(e){renderDi
 
 /* ---------- N-05 hora pico ---------- */
 var chartHP = null, chartHPO = null;
+var DIAS_SEM = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+function wdIdx(fecha){ var p=fecha.split('/'); var dt=new Date(Number(p[2]),Number(p[1])-1,Number(p[0])); return (dt.getDay()+6)%7; }
+function esDiaEnCurso(d){ return d.fecha===hoyFechaStr; }
+function fmt1(v){ return v.toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1}); }
 function sumarHoras(dataArr, campo){
   var out = new Array(24).fill(0);
   dataArr.forEach(function(d){ (d[campo]||[]).forEach(function(v,h){ out[h]+=v; }); });
   return out;
 }
+var HP_DIAS_OPC = [['todos','Todos los días'],['lv','Lun–Vie'],['sd','Sáb–Dom'],['0','Lun'],['1','Mar'],['2','Mié'],['3','Jue'],['4','Vie'],['5','Sáb'],['6','Dom']];
+var hpFiltrado = [], hpLabel = 'Año completo', hpDias = 'todos';
+function pasaDiaSemana(d, sel){
+  if(sel==='todos') return true;
+  var w = wdIdx(d.fecha);
+  if(sel==='lv') return w<5;
+  if(sel==='sd') return w>=5;
+  return w===Number(sel);
+}
+function pintarDiasHoraPico(){
+  var cont = document.getElementById('horaPicoDias');
+  cont.innerHTML = HP_DIAS_OPC.map(function(o){
+    return '<button type="button" class="pill'+(o[0]===hpDias?' active':'')+'" data-d="'+o[0]+'">'+o[1]+'</button>';
+  }).join('');
+  cont.querySelectorAll('.pill').forEach(function(b){
+    b.addEventListener('click', function(){
+      hpDias = b.dataset.d;
+      cont.querySelectorAll('.pill').forEach(function(x){ x.classList.toggle('active', x===b); });
+      renderHoraPico(hpFiltrado, hpLabel);
+    });
+  });
+}
 function renderHoraPico(dataArr, label){
-  var horasArr = sumarHoras(dataArr, 'horas');
-  var horasOcupArr = sumarHoras(dataArr, 'horasOcup');
-  var xLabels = horasArr.map(function(v,h){return h+'h';});
+  hpFiltrado = dataArr; hpLabel = label;
+  var sel = dataArr.filter(function(d){ return pasaDiaSemana(d, hpDias); });
+  var completos = sel.filter(function(d){ return !esDiaEnCurso(d); });
+  var n = completos.length, excluyeHoy = completos.length < sel.length;
+  var totPagos = sumarHoras(sel, 'horas'), totOcup = sumarHoras(sel, 'horasOcup');
+  var sumPagos = sumarHoras(completos, 'horas'), sumOcup = sumarHoras(completos, 'horasOcup');
+  var promPagos = sumPagos.map(function(v){ return n? v/n : 0; });
+  var promOcup = sumOcup.map(function(v){ return n? v/n : 0; });
+  var xLabels = promPagos.map(function(v,h){return h+'h';});
 
   var tb = document.getElementById('tbodyHoraPico'); tb.innerHTML='';
-  horasArr.forEach(function(v,h){
-    tb.innerHTML += '<tr><td>'+h+':00</td><td>'+v+'</td><td>'+horasOcupArr[h]+'</td></tr>';
+  promPagos.forEach(function(v,h){
+    tb.innerHTML += '<tr><td>'+h+':00</td><td>'+fmt1(v)+'</td><td>'+totPagos[h].toLocaleString('es-CL')+'</td><td>'+fmt1(promOcup[h])+'</td><td>'+totOcup[h].toLocaleString('es-CL')+'</td></tr>';
   });
-  document.getElementById('horaPicoLabel').textContent = label;
+  var nombreDias = HP_DIAS_OPC.filter(function(o){return o[0]===hpDias;})[0][1];
+  document.getElementById('horaPicoLabel').textContent = label + (hpDias!=='todos' ? ' · solo '+nombreDias : '');
+  var nota;
+  if(!n){
+    nota = 'No hay días completos en este período para calcular un promedio.';
+  } else {
+    var hMax = promPagos.indexOf(Math.max.apply(null, promPagos));
+    var hMaxO = promOcup.indexOf(Math.max.apply(null, promOcup));
+    var pagosDia = promPagos.reduce(function(a,b){return a+b;},0);
+    nota = 'Promedio sobre <b>'+n+'</b> día'+(n===1?'':'s')+' completo'+(n===1?'':'s')+
+      (excluyeHoy ? ' (hoy no se cuenta porque el día sigue en curso)' : '')+
+      '. Hora con más pagos: <b>'+hMax+':00</b> ('+fmt1(promPagos[hMax])+' pagos/día). '+
+      'Mayor ocupación estimada: <b>'+hMaxO+':00</b> ('+fmt1(promOcup[hMaxO])+' autos). '+
+      'En total, '+fmt1(pagosDia)+' pagos en un día promedio.';
+  }
+  document.getElementById('horaPicoNota').innerHTML = nota;
 
   requestAnimationFrame(function(){
     if(chartHP){ chartHP.destroy(); chartHP = null; }
     if(chartHPO){ chartHPO.destroy(); chartHPO = null; }
-    chartHP = barChart(document.getElementById('chartHoraPico'), xLabels, horasArr, {thick:16, noAnim:true, scales:{
+    chartHP = barChart(document.getElementById('chartHoraPico'), xLabels, promPagos, {thick:16, noAnim:true,
+      tooltipLabel:function(c){ return fmt1(c.parsed.y)+' pagos/día (total '+totPagos[c.dataIndex].toLocaleString('es-CL')+')'; }, scales:{
       x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
-      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Cantidad de pagos', color:cssVar('--ink-muted'), font:{size:10}}},
+      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Pagos promedio por día', color:cssVar('--ink-muted'), font:{size:10}}},
     }});
-    chartHPO = barChart(document.getElementById('chartHoraPicoOcup'), xLabels, horasOcupArr, {thick:16, colors:cssVar('--accent'), noAnim:true, scales:{
+    chartHPO = barChart(document.getElementById('chartHoraPicoOcup'), xLabels, promOcup, {thick:16, colors:cssVar('--accent'), noAnim:true,
+      tooltipLabel:function(c){ return fmt1(c.parsed.y)+' autos promedio (total '+totOcup[c.dataIndex].toLocaleString('es-CL')+')'; }, scales:{
       x:{grid:{display:false}, ticks:{color:cssVar('--ink-muted')}, title:{display:true, text:'Hora del día', color:cssVar('--ink-muted'), font:{size:10}}},
-      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Ocupación estimada (autos·hora)', color:cssVar('--ink-muted'), font:{size:9}}},
+      y:{grid:baseGrid(), border:{display:false}, ticks:{color:cssVar('--ink-muted')}, beginAtZero:true, title:{display:true, text:'Autos estacionados promedio (est.)', color:cssVar('--ink-muted'), font:{size:9}}},
     }});
   });
 }
@@ -661,23 +716,62 @@ function renderRanking(){
 }
 
 /* ---------- N-08/09 heatmaps ---------- */
-function renderHeatmap(data, containerId, isOcup){
-  var dias=['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+var heatFiltrado = [], heatLabel = 'Año completo', heatModo = 'prom';
+function calcHeat(dataArr, campo){
+  var sum = [], cnt = [0,0,0,0,0,0,0];
+  for(var i=0;i<7;i++) sum.push(new Array(24).fill(0));
+  dataArr.forEach(function(d){
+    if(heatModo==='prom' && esDiaEnCurso(d)) return;
+    var w = wdIdx(d.fecha); cnt[w]++;
+    (d[campo]||[]).forEach(function(v,h){ sum[w][h]+=v; });
+  });
+  var m = sum.map(function(row,i){ return row.map(function(v){ return heatModo==='prom' ? (cnt[i]? v/cnt[i] : 0) : v; }); });
+  return {m:m, cnt:cnt};
+}
+function fmtHeat(v){ return heatModo==='prom' ? (v>=10 ? Math.round(v).toString() : fmt1(v)) : Math.round(v).toLocaleString('es-CL'); }
+function renderHeatmap(data, containerId, isOcup, cnt){
   var max=0; data.forEach(function(row){row.forEach(function(v){if(v>max)max=v;});});
   var html='<div class="heat-grid"><div></div>';
   for(var h=0;h<24;h++) html+='<div class="hh">'+h+'</div>';
   data.forEach(function(row,i){
-    html+='<div class="dd">'+dias[i].slice(0,3)+'</div>';
+    html+='<div class="dd" title="'+cnt[i]+' '+DIAS_SEM[i]+' en el período">'+DIAS_SEM[i].slice(0,3)+'<span style="color:var(--ink-muted);font-size:9px;margin-left:4px;">'+cnt[i]+'</span></div>';
     row.forEach(function(v,h2){
       var alpha = max>0? (v/max) : 0;
       var mixPct = Math.round(alpha*90+8);
       var bg = 'color-mix(in srgb, var(--seq-500) '+mixPct+'%, var(--surface))';
       var fg = mixPct>=50 ? '#fff' : 'var(--ink)';
-      html+='<div class="cell" title="'+dias[i]+' '+h2+':00 – '+v+(isOcup?' ocupadas (est.)':' pagos')+'" style="background:'+bg+';color:'+fg+';">'+(v>0&&alpha>0.35?v:'')+'</div>';
+      var tip = DIAS_SEM[i]+' '+h2+':00 – '+fmtHeat(v)+(isOcup?' autos estacionados (est.)':' pagos')+
+                (heatModo==='prom' ? ' en promedio ('+cnt[i]+' '+DIAS_SEM[i]+')' : ' en total');
+      html+='<div class="cell" title="'+tip+'" style="background:'+bg+';color:'+fg+';">'+(v>0&&alpha>0.35?fmtHeat(v):'')+'</div>';
     });
   });
   html+='</div><div class="heat-scale"><span>menos</span><div class="ramp"></div><span>más</span></div>';
   document.getElementById(containerId).innerHTML = html;
+}
+function pintarModoHeat(){
+  var cont = document.getElementById('heatModo');
+  cont.innerHTML = [['prom','Promedio por día'],['total','Total del período']].map(function(o){
+    return '<button type="button" class="pill'+(o[0]===heatModo?' active':'')+'" data-m="'+o[0]+'">'+o[1]+'</button>';
+  }).join('');
+  cont.querySelectorAll('.pill').forEach(function(b){
+    b.addEventListener('click', function(){
+      heatModo = b.dataset.m;
+      cont.querySelectorAll('.pill').forEach(function(x){ x.classList.toggle('active', x===b); });
+      renderHeatmaps(heatFiltrado, heatLabel);
+    });
+  });
+}
+function renderHeatmaps(dataArr, label){
+  heatFiltrado = dataArr; heatLabel = label;
+  var a = calcHeat(dataArr, 'horas'), b = calcHeat(dataArr, 'horasOcup');
+  renderHeatmap(a.m, 'heatmapReal', false, a.cnt);
+  renderHeatmap(b.m, 'heatmapOcup', true, b.cnt);
+  document.getElementById('heatLabel').textContent = label;
+  var nDias = a.cnt.reduce(function(x,y){return x+y;},0);
+  var hayHoy = dataArr.some(esDiaEnCurso);
+  document.getElementById('heatNota').innerHTML = heatModo==='prom'
+    ? 'Promedio sobre <b>'+nDias+'</b> días completos'+(hayHoy?' (hoy no se cuenta porque sigue en curso)':'')+'. Pasa el mouse sobre una casilla para ver el valor exacto.'
+    : 'Suma de <b>'+nDias+'</b> días del período. Ojo: si el período no tiene la misma cantidad de cada día de la semana, las filas no son comparables entre sí — para comparar usa &ldquo;Promedio por día&rdquo;.';
 }
 
 /* ---------- N-10 tendencia ---------- */
@@ -769,6 +863,7 @@ function renderAll(){
     renderHistorialChart(filtered);
   });
 
+  hpDias = 'todos'; pintarDiasHoraPico();
   renderHoraPico(daily, 'Año completo');
   buildDateFilter('horaPicoFiltro', function(filtered, label){ renderHoraPico(filtered, label); });
 
@@ -778,8 +873,9 @@ function renderAll(){
 
   renderRanking();
 
-  renderHeatmap(heatmapData, 'heatmapReal', false);
-  renderHeatmap(occupancyHeatmapData, 'heatmapOcup', true);
+  pintarModoHeat();
+  renderHeatmaps(daily, 'Año completo');
+  buildDateFilter('heatFiltro', function(filtered, label){ renderHeatmaps(filtered, label); });
 
   renderTendencia();
 }
