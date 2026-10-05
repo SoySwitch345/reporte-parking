@@ -369,6 +369,7 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
         <h3>Cupones de membres&iacute;a</h3>
         <p class="note">Cupones de estacionamiento que se entregan a empresas (en Cttos, el nombre lleva &ldquo;Parking&rdquo;). Su valor cambia cada mes seg&uacute;n el uso: no se cuentan como contratos en el resto de la secci&oacute;n ni se proyectan a futuro.</p>
         <div class="kpis" id="abCupKpis" style="margin-top:10px;"></div>
+        <p class="note" id="abCupAlerta" style="margin:10px 0 0;"></p>
         <div class="grid-2" style="margin-top:20px;">
           <div><h4 style="margin:0 0 8px;font-size:13px;">UF al mes por arrendador</h4><div class="chart-box"><canvas id="chartAbCup"></canvas></div></div>
           <div><div class="tblwrap"><table><thead><tr><th>Mes</th><th>Rentas N. El Golf</th><th>Consorcio</th><th>Total</th><th>$</th><th>Con uso</th></tr></thead><tbody id="abCupTab"></tbody></table></div></div>
@@ -1046,6 +1047,8 @@ function abS(mo, j, bl){ if(!mo) return 0; return (bl||abBloques()).reduce(funct
 function abArr(mo, campo, j, bl){ if(!mo||!mo[campo]) return null; var t=0, ok=false; (bl||abBloques()).forEach(function(i){ var r=mo[campo][i]; if(r && r[j]!=null){ t+=r[j]; ok=true; } }); return ok? t : null; }
 function abCup(mo, j, ar){ if(!mo||!mo.cup) return 0; return (ar==null?[0,1]:[ar]).reduce(function(a,i){ return a+((mo.cup[i]||[])[j]||0); }, 0); }
 function abEsCup(f){ return f[13]===1; }
+function abCupPie(mo, a){ var t=abNum(abCup(mo,1,a))+' de '+abNum(abCup(mo,0,a))+' con uso'; var fj=abCup(mo,4,a); return fj ? t+' · '+fj+' con monto fijo' : t; }
+function abEsCtto(f){ return !abEsCup(f) && Math.abs(f[9]||0)>=0.01; }
 function abRatio(a, b){ return (a==null||b==null||!b) ? null : a/b; }
 function abRotativo(m){ var d=dataByYear[Number(m.slice(0,4))]; if(!d) return null; var x=d.monthly[Number(m.slice(5,7))-1]; return x ? x.cobrado : null; }
 function abDraw(id, cfg){ if(abCharts[id]){ abCharts[id].destroy(); } abCharts[id]=new Chart(document.getElementById(id), cfg); }
@@ -1129,11 +1132,15 @@ function renderAbonados(){
   var cUF=abCup(mo,2), cVar=(cAnt && cAnt.cup && abCup(cAnt,2)) ? cUF/abCup(cAnt,2)-1 : null;
   document.getElementById('abCupKpis').innerHTML = !mo.cup ? '<p class="note" style="margin:0;">Sin datos de cupones para este mes (falta volver a publicar con el bot&oacute;n de Parking).</p>' : [
     {l:'Cupones del mes', v:abUF(cUF), f:fmtCLP(abCup(mo,3))+(enCurso?' (mes en curso)':'')},
-    {l:AB_ARR[0], v:abUF(abCup(mo,2,0)), f:abNum(abCup(mo,1,0))+' de '+abNum(abCup(mo,0,0))+' cupones con uso'},
-    {l:AB_ARR[1], v:abUF(abCup(mo,2,1)), f:abNum(abCup(mo,1,1))+' de '+abNum(abCup(mo,0,1))+' cupones con uso'},
+    {l:AB_ARR[0], v:abUF(abCup(mo,2,0)), f:abCupPie(mo,0)},
+    {l:AB_ARR[1], v:abUF(abCup(mo,2,1)), f:abCupPie(mo,1)},
     {l:'vs. mes anterior', v:(cVar==null?'–':(cVar>=0?'+':'')+abPct(cVar)), f:cAnt && cAnt.cup ? abUF(abCup(cAnt,2))+' en '+abMesLargo(cAnt.m) : ''},
     {l:'Promedio 12 meses', v:abUF(cProm), f:cUlt.length+' meses con datos'},
   ].map(function(k){ return '<div class="kpi"><div class="lbl">'+k.l+'</div><div class="val">'+k.v+'</div><div class="foot">'+k.f+'</div></div>'; }).join('');
+  var sinUso=abCup(mo,0)-abCup(mo,1), nFijo=abCup(mo,4), ufFijo=abCup(mo,5), al=[];
+  if(mo.cup && sinUso>0) al.push('<b>'+sinUso+' cupón'+(sinUso===1?'':'es')+' vigente'+(sinUso===1?'':'s')+' sin uso</b> este mes (en Cttos figuran con monto casi cero): están entregados y no generan ingreso.');
+  if(mo.cup && nFijo>0) al.push('<b>'+nFijo+' cupón'+(nFijo===1?'':'es')+' ('+abUF(ufFijo)+') con el mismo monto hace 6 meses o más</b>: no reflejan el uso real; hay que revisar cómo se registran.');
+  document.getElementById('abCupAlerta').innerHTML = al.join(' ');
   var tcu=document.getElementById('abCupTab'); tcu.innerHTML='';
   for(var kc=11;kc>=0;kc--){
     var mc=abMesMas(abMes,-kc), xc=abMesObj(mc); if(!xc || !xc.cup || !cupIni || mc<cupIni.m) continue;
@@ -1209,8 +1216,8 @@ async function abDescifrar(clave){
 function abPrepararDetalle(d){
   // antiguedad por cliente (sector + nombre) desde el inicio de su primer contrato
   var primero={}; var norm=function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
-  d.filas.forEach(function(f){ if(abEsCup(f)) return; var k=f[1]+'|'+norm(f[3]); var ini=(f[5]||f[0]+'-01').slice(0,7); if(!primero[k] || ini<primero[k]) primero[k]=ini; });
-  d.filas.forEach(function(f){ if(abEsCup(f)){ f.antig=null; return; } var k=f[1]+'|'+norm(f[3]); f.antig=Math.max(0, abDif(primero[k], f[0])); });
+  d.filas.forEach(function(f){ if(!abEsCtto(f)) return; var k=f[1]+'|'+norm(f[3]); var ini=(f[5]||f[0]+'-01').slice(0,7); if(!primero[k] || ini<primero[k]) primero[k]=ini; });
+  d.filas.forEach(function(f){ if(!abEsCtto(f)){ f.antig=null; return; } var k=f[1]+'|'+norm(f[3]); f.antig=Math.max(0, abDif(primero[k], f[0])); });
   return d;
 }
 async function abAbrir(clave, silencioso){
@@ -1247,7 +1254,7 @@ function renderAbDetalle(){
   var bl=abBloques(), g=new Date(abDet.generadoEn);
   // contratos
   var q=(document.getElementById('abBuscar').value||'').toLowerCase();
-  var rows=abDet.filas.filter(function(f){ return f[0]===abMes && !abEsCup(f) && bl.indexOf(f[1]-1)>=0 && (!q || String(f[3]).toLowerCase().indexOf(q)>=0); });
+  var rows=abDet.filas.filter(function(f){ return f[0]===abMes && abEsCtto(f) && bl.indexOf(f[1]-1)>=0 && (!q || String(f[3]).toLowerCase().indexOf(q)>=0); });
   var c=AB_COLS[abSort.col][1];
   rows.sort(function(a,b){ var x=a[c], y=b[c]; if(x==null) x=''; if(y==null) y=''; var r=(typeof x==='number' && typeof y==='number')? x-y : String(x).localeCompare(String(y),'es'); return abSort.asc? r : -r; });
   document.getElementById('abDetHead').innerHTML=AB_COLS.map(function(h,i){ return '<th data-i="'+i+'" class="'+(i===abSort.col?'on'+(abSort.asc?' asc':''):'')+'">'+h[0]+'</th>'; }).join('');
@@ -1260,18 +1267,24 @@ function renderAbDetalle(){
   // ranking estacionamiento (siempre solo estacionamiento)
   document.querySelectorAll('#abRankOrden button').forEach(function(b){ b.classList.toggle('on', b.dataset.o===abRankOrden); });
   var agg={}, totUF=0;
-  abDet.filas.forEach(function(f){ if(f[0]!==abMes || f[1]!==1 || abEsCup(f)) return; var k=String(f[3]||'').toLowerCase().replace(/\s+/g,' ').trim();
+  abDet.filas.forEach(function(f){ if(f[0]!==abMes || f[1]!==1 || !abEsCtto(f)) return; var k=String(f[3]||'').toLowerCase().replace(/\s+/g,' ').trim();
     var a=agg[k]||(agg[k]={nom:f[3], uf:0, u:0, ant:0, fin:''}); a.uf+=(f[9]||0); a.u+=(f[11]||0); a.ant=Math.max(a.ant, f.antig||0); var fin=f[7]||f[6]||''; if(fin>a.fin) a.fin=fin; if(f[9]>0) totUF+=f[9]; });
   var rk=Object.keys(agg).map(function(k){ return agg[k]; }).sort(function(a,b){ return abRankOrden==='uf' ? b.uf-a.uf : (b.ant-a.ant || b.uf-a.uf); });
   document.getElementById('abRank').innerHTML=rk.map(function(a,i){ return '<tr><td>'+(i+1)+'</td><td class="nom">'+abEsc(a.nom)+'</td><td>'+abNum(a.u||null)+'</td><td>'+abUF(a.uf)+'</td><td>'+abUF(a.u? a.uf/a.u : null,2)+'</td><td>'+abPct(totUF? a.uf/totUF : null)+'</td><td>'+abMeses(a.ant)+'</td><td>'+abFecha(a.fin)+'</td></tr>'; }).join('');
   document.getElementById('abRankNota').textContent=rk.length+' clientes de estacionamiento en '+abMesLargo(abMes)+' (sin oficinas ni residencial, sin importar el sector elegido arriba).';
   // terminan pronto (respecto al mes actual real)
   var ref=abRes? abRes.ref : abMes, lim=abMesMas(ref,2);
-  var vence=abDet.filas.filter(function(f){ if(f[0]!==ref || abEsCup(f) || bl.indexOf(f[1]-1)<0) return false; var fin=f[7]||f[6]; return fin && fin.slice(0,7)>=ref && fin.slice(0,7)<=lim; })
+  var vence=abDet.filas.filter(function(f){ if(f[0]!==ref || !abEsCtto(f) || bl.indexOf(f[1]-1)<0) return false; var fin=f[7]||f[6]; return fin && fin.slice(0,7)>=ref && fin.slice(0,7)<=lim; })
     .sort(function(a,b){ return String(a[7]||a[6]).localeCompare(String(b[7]||b[6])) || (b[9]-a[9]); });
   document.getElementById('abTermNota').textContent=vence.length+' contratos terminan entre '+abMesLargo(ref)+' y '+abMesLargo(lim)+' según contrato (término anticipado si existe). Conviene contactarlos antes para renovar.';
   abCuponesEmpresa(ref);
   document.getElementById('abVence').innerHTML = vence.length ? vence.map(function(f){ return '<tr><td class="nom">'+abEsc(f[3])+'</td><td>'+AB_BLOQ[f[1]-1]+'</td><td>'+abFecha(f[7]||f[6])+'</td><td>'+abNum(f[11])+'</td><td>'+abUF(f[9])+'</td><td>'+abMeses(f.antig)+'</td></tr>'; }).join('') : '<tr><td colspan="6">Ninguno en este período.</td></tr>';
+}
+function abCupChip(e, meses){
+  var fin=meses[meses.length-1], u=e.uf[fin]||0;
+  if(u<0.01) return ' <span class="chip neg">sin uso</span>';
+  var ult=meses.slice(-6); if(ult.length===6 && ult.every(function(m){ return Math.abs((e.uf[m]||0)-u)<0.0001; })) return ' <span class="chip neg">monto fijo</span>';
+  return '';
 }
 function abCuponesEmpresa(ref){
   var nota=document.getElementById('abCupEmpNota'), tb=document.getElementById('abCupEmp');
@@ -1282,10 +1295,10 @@ function abCuponesEmpresa(ref){
     var e=emp[k]||(emp[k]={nom:f[3], arr:/consorcio/i.test(f[12]||'')?1:0, uf:{}, clp:{}}); e.uf[f[0]]=(e.uf[f[0]]||0)+(f[9]||0); e.clp[f[0]]=(e.clp[f[0]]||0)+(f[10]||0); });
   var lst=Object.keys(emp).map(function(k){ var e=emp[k]; e.tot=meses.reduce(function(a,m){ return a+(e.uf[m]||0); },0); e.uso=meses.filter(function(m){ return (e.uf[m]||0)>=0.01; }).length; return e; })
     .sort(function(a,b){ return (b.uf[fin]||0)-(a.uf[fin]||0) || b.tot-a.tot; });
-  nota.textContent=lst.length+' empresas con cupón entre '+abMesLargo(ini)+' y '+abMesLargo(fin)+'. El gráfico muestra las 6 de mayor uso en el período; el resto va en "Otras".';
+  nota.textContent=lst.length+' empresas con cupón entre '+abMesLargo(ini)+' y '+abMesLargo(fin)+'. El gráfico muestra las 6 de mayor uso en el período; el resto va en "Otras". "Monto fijo" = mismo valor los últimos 6 meses (no refleja uso); "sin uso" = vigente con monto casi cero.';
   var ant=abMesMas(fin,-1);
   tb.innerHTML=lst.map(function(e){ var u=e.uf[fin]||0, ua=e.uf[ant], v=(ua? u/ua-1 : null);
-    return '<tr><td class="nom">'+abEsc(e.nom)+'</td><td>'+AB_ARR[e.arr]+'</td><td>'+abUF(u,2)+'</td><td>'+fmtCLP(e.clp[fin]||0)+'</td><td>'+(v==null?'–':(v>=0?'+':'')+abPct(v))+'</td><td>'+abUF(e.tot/meses.length,2)+'</td><td>'+e.uso+' de '+meses.length+'</td></tr>'; }).join('') || '<tr><td colspan="7">Sin cupones en el período.</td></tr>';
+    return '<tr><td class="nom">'+abEsc(e.nom)+'</td><td>'+AB_ARR[e.arr]+'</td><td>'+abUF(u,2)+abCupChip(e, meses)+'</td><td>'+fmtCLP(e.clp[fin]||0)+'</td><td>'+(v==null?'–':(v>=0?'+':'')+abPct(v))+'</td><td>'+abUF(e.tot/meses.length,2)+'</td><td>'+e.uso+' de '+meses.length+'</td></tr>'; }).join('') || '<tr><td colspan="7">Sin cupones en el período.</td></tr>';
   if(abTab!=='cupones') return;
   var top=lst.slice().sort(function(a,b){ return b.tot-a.tot; }), ds=top.slice(0,6).map(function(e,i){ return {label:e.nom, data:meses.map(function(m){ return Math.round((e.uf[m]||0)*100)/100; }), backgroundColor:cssVar(AB_EMP_VAR[i]), borderWidth:0, borderRadius:2}; });
   if(top.length>6) ds.push({label:'Otras ('+(top.length-6)+')', data:meses.map(function(m){ return Math.round(top.slice(6).reduce(function(a,e){ return a+(e.uf[m]||0); },0)*100)/100; }), backgroundColor:cssVar('--ink-muted'), borderWidth:0, borderRadius:2});
