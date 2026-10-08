@@ -182,6 +182,20 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
     return records
 
 
+def es_pago_valido(raw: dict) -> bool:
+    """Solo cuenta pagos reales: exitosos, con folio (boleta SII) y no
+    registrados por el terminal "Rpay" (desde 2026-10-06 duplica el cobro
+    del cajero, sin folio). Rechazados y pagos sin folio no son ingreso."""
+    if "exitoso" not in str(raw.get("payment_status") or "").lower():
+        return False
+    if str(raw.get("payee") or "").strip().lower().startswith("rpay"):
+        return False
+    try:
+        return int(raw.get("folio") or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
 def parse_record(raw: dict) -> dict:
     """API -> {id, dt (datetime naive, hora local Chile), monto}."""
     date_at = raw.get("date_at", "")  # "dd-mm-yyyy"
@@ -220,7 +234,7 @@ def reconciliar(session: requests.Session, dataset: list[dict], hoy: date) -> tu
     reconcile_from = last_date - timedelta(days=RECONCILE_DAYS - 1)
 
     fetched_raw = fetch_range(session, reconcile_from, hoy)
-    fetched = [parse_record(r) for r in fetched_raw]
+    fetched = [parse_record(r) for r in fetched_raw if es_pago_valido(r)]
 
     existing_ids = {r["id"] for r in dataset}
 
