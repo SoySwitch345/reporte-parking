@@ -267,11 +267,13 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   <div class="card" id="sec-historial">
     <h2><span class="code">N&middot;04</span>Historial diario</h2>
     <p class="note">Facturado por d&iacute;a. Filtra por semana, mes o un rango de fechas.</p>
-    <p class="note" style="margin-top:4px;">El aviso &ldquo;&#9888; revisar&rdquo; significa transacciones muy por debajo de lo t&iacute;pico para ese d&iacute;a de la semana (d&iacute;a flojo real, o sincronizaci&oacute;n incompleta). &ldquo;en curso&rdquo; marca el d&iacute;a en que se gener&oacute; este reporte &mdash; su total todav&iacute;a puede subir.</p>
+    <p class="note" style="margin-top:4px;">El aviso &ldquo;&#9888; revisar&rdquo; significa transacciones muy por debajo de lo t&iacute;pico para ese d&iacute;a de la semana (d&iacute;a flojo real, o sincronizaci&oacute;n incompleta). &ldquo;&#9650; revisar alza&rdquo; marca un monto o n&uacute;mero de transacciones de 2 veces o m&aacute;s lo t&iacute;pico (evento real, o pagos duplicados). &ldquo;en curso&rdquo; marca el d&iacute;a en que se gener&oacute; este reporte &mdash; su total todav&iacute;a puede subir.</p>
+    <p class="note" style="margin-top:4px;">Solo se cuentan pagos exitosos con folio (boleta). La columna &ldquo;Excluidas&rdquo; muestra lo que ParkingApp registr&oacute; ese d&iacute;a y no se cuenta: pagos rechazados, sin folio, o duplicados del terminal Rpay.</p>
+    <div id="histExcluidas"></div>
     <div id="histFiltro"></div>
     <div class="chart-box wide"><canvas id="chartHistorial"></canvas></div>
     <input id="buscar" placeholder="Buscar fecha (dd/mm/aaaa)&hellip;" style="margin-top:16px;">
-    <div class="scroll"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th><th>#</th><th>$/Transac</th></tr></thead>
+    <div class="scroll"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th><th>#</th><th>$/Transac</th><th>Excluidas</th></tr></thead>
     <tbody id="tbodyDiario"></tbody></table></div>
   </div>
 
@@ -468,7 +470,7 @@ let monthly, daily, hourly, heatmapData, occupancyHourlyData, occupancyHeatmapDa
     estadiaProm, diaCompletoCount, diaCompletoOcupEstim, totalTransAnio, cobradoMesActual,
     proyeccionMesActual, diasTranscurridosMesActual, diasTotalesMesActual, nombreMesActual,
     currentYear, totalCobradoAnioAnterior, totalTransAnioAnterior, tarifaMinActual,
-    historialData, medianaTransDia, bucketLabelsFull, hoyRefAnio;
+    historialData, medianaTransDia, medianaMontoDia, bucketLabelsFull, hoyRefAnio;
 
 function calcProyeccionPonderada(){
   var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -699,12 +701,39 @@ function renderDiario(filtro){
       flag = ' <span class="chip" style="background:rgba(120,120,120,.15);color:var(--ink-2);" title="Día en curso al momento de generar este reporte (' + generadoEnDate.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) + '). El total todavía puede subir.">en curso</span>';
     } else {
       var med = medianaTransDia[d.dia] || 0;
+      var medM = medianaMontoDia[d.dia] || 0;
       if (med>0 && d.transacciones < med*0.3) {
         flag = ' <span class="chip neg" title="Transacciones muy por debajo de lo típico para un '+d.dia+' ('+d.transacciones+' vs mediana '+med.toFixed(0)+'). Podría ser un día flojo real, o una sincronización incompleta con ParkingApp.">&#9888; revisar</span>';
+      } else if ((medM>0 && d.monto >= medM*2) || (med>0 && d.transacciones >= med*2)) {
+        flag = ' <span class="chip neg" title="Muy por encima de lo típico para un '+d.dia+': '+fmtCLP(d.monto)+' vs mediana '+fmtCLP(medM)+', '+d.transacciones+' transacciones vs mediana '+med.toFixed(0)+'. Puede ser un evento real o pagos duplicados: revisar en ParkingApp.">&#9650; revisar alza</span>';
       }
     }
-    tb.innerHTML+='<tr><td>'+d.fecha+flag+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td></tr>';
+    tb.innerHTML+='<tr><td>'+d.fecha+flag+'</td><td>'+d.dia+'</td><td>'+fmtCLP(d.monto)+'</td><td>'+d.transacciones+'</td><td>'+fmtCLP(d.montoTransac)+'</td><td>'+exclCelda(d.fecha)+'</td></tr>';
   });
+}
+var EXCL_MOT = {rpay:'duplicado Rpay', rechazado:'rechazado', sin_folio:'sin folio'};
+function exclDetalle(e){
+  return Object.keys(EXCL_MOT).filter(function(k){return e[k];}).map(function(k){return e[k]+' '+EXCL_MOT[k];}).join(', ');
+}
+function exclCelda(fecha){
+  var e = (typeof excluidosDia!=='undefined' && excluidosDia[fecha]) || null;
+  if(!e || !e.n) return '<span style="color:var(--ink-muted);">&ndash;</span>';
+  return '<span class="chip neg" title="No se cuentan: '+exclDetalle(e)+'">'+e.n+' &middot; '+fmtCLP(e.m)+'</span>';
+}
+function renderExcluidas(){
+  var box = document.getElementById('histExcluidas'); if(!box) return;
+  var ex = (typeof excluidosDia!=='undefined') ? excluidosDia : {};
+  var lim = new Date(hoyRefAnio.getTime()); lim.setDate(lim.getDate()-30);
+  var tot = {n:0,m:0,rpay:0,rechazado:0,sin_folio:0}, dias = 0;
+  Object.keys(ex).forEach(function(f){
+    var p=f.split('/'), dt=new Date(Number(p[2]),Number(p[1])-1,Number(p[0]));
+    if(dt<=lim || dt>hoyRefAnio) return;
+    var e=ex[f]; dias++;
+    Object.keys(tot).forEach(function(k){ tot[k]+=e[k]||0; });
+  });
+  box.innerHTML = tot.n
+    ? '<p class="note" style="margin-top:4px;"><span class="chip neg">Excluidas &uacute;ltimos 30 d&iacute;as</span> <b>'+tot.n+'</b> transacciones por <b>'+fmtCLP(tot.m)+'</b> en '+dias+' d&iacute;a'+(dias===1?'':'s')+' ('+exclDetalle(tot)+'). No suman en ning&uacute;n n&uacute;mero del reporte.</p>'
+    : '<p class="note" style="margin-top:4px;">&Uacute;ltimos 30 d&iacute;as: ninguna transacci&oacute;n excluida.</p>';
 }
 document.getElementById('buscar').addEventListener('input', function(e){renderDiario(e.target.value);});
 
@@ -994,6 +1023,14 @@ function renderAll(){
     Object.keys(porDia).forEach(function(k){ out[k] = medianaArr(porDia[k]); });
     return out;
   })();
+  medianaMontoDia = (function(){
+    var porDia = {};
+    daily.forEach(function(d){ (porDia[d.dia] = porDia[d.dia]||[]).push(d.monto); });
+    var out = {};
+    Object.keys(porDia).forEach(function(k){ out[k] = medianaArr(porDia[k]); });
+    return out;
+  })();
+  renderExcluidas();
   renderDiario('');
   renderHistorialChart(historialData);
   buildDateFilter('histFiltro', function(filtered){

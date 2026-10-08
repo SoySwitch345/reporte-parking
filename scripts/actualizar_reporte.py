@@ -48,6 +48,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(REPO_ROOT, "data", "pagos.json")
 TEMPLATE_PATH = os.path.join(REPO_ROOT, "scripts", "template.html")
 OUTPUT_PATH = os.path.join(REPO_ROOT, "index.html")
+# Pagos que ParkingApp registra pero no se cuentan (ver motivo_exclusion).
+EXCL_PATH = os.path.join(REPO_ROOT, "data", "excluidos.json")
 
 MONTH_NAMES = [
     None, "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -182,18 +184,23 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
     return records
 
 
-def es_pago_valido(raw: dict) -> bool:
-    """Solo cuenta pagos reales: exitosos, con folio (boleta SII) y no
-    registrados por el terminal "Rpay" (desde 2026-10-06 duplica el cobro
-    del cajero, sin folio). Rechazados y pagos sin folio no son ingreso."""
+def motivo_exclusion(raw: dict) -> str | None:
+    """None si el pago cuenta. Solo cuentan pagos exitosos, con folio (boleta
+    SII) y no registrados por el terminal "Rpay" (desde 2026-10-06 duplica el
+    cobro del cajero, sin folio)."""
     if "exitoso" not in str(raw.get("payment_status") or "").lower():
-        return False
+        return "rechazado"
     if str(raw.get("payee") or "").strip().lower().startswith("rpay"):
-        return False
+        return "rpay"
     try:
-        return int(raw.get("folio") or 0) > 0
+        folio = int(raw.get("folio") or 0)
     except (TypeError, ValueError):
-        return False
+        folio = 0
+    return None if folio > 0 else "sin_folio"
+
+
+def es_pago_valido(raw: dict) -> bool:
+    return motivo_exclusion(raw) is None
 
 
 def parse_record(raw: dict) -> dict:
@@ -224,8 +231,39 @@ def save_dataset(records: list[dict]) -> None:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 
 
-def reconciliar(session: requests.Session, dataset: list[dict], hoy: date) -> tuple[list[dict], bool]:
-    """Replica la reconciliacion de ActualizarAhora. Devuelve (nuevo_dataset, hubo_cambios)."""
+def load_excluidos() -> list[dict]:
+    if not os.path.exists(EXCL_PATH):
+        return []
+    with open(EXCL_PATH, encoding="utf-8") as f:
+        raw = json.load(f)
+    return [{**r, "dt": datetime.fromisoformat(r["dt"])} for r in raw]
+
+
+def save_excluidos(records: list[dict]) -> None:
+    records = sorted(records, key=lambda r: r["dt"])
+    out = [{"id": r["id"], "dt": r["dt"].isoformat(timespec="minutes"), "monto": r["monto"], "motivo": r["motivo"]}
+           for r in records]
+    with open(EXCL_PATH, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+
+
+def excluidos_por_dia(excluidos: list[dict]) -> dict:
+    out: dict[str, dict] = {}
+    for r in excluidos:
+        k = r["dt"].strftime("%d/%m/%Y")
+        e = out.setdefault(k, {"n": 0, "m": 0, "rpay": 0, "rechazado": 0, "sin_folio": 0})
+        e["n"] += 1
+        e["m"] += r["monto"]
+        e[r["motivo"]] += 1
+    for e in out.values():
+        e["m"] = _num(e["m"])
+    return out
+
+
+def reconciliar(session: requests.Session, dataset: list[dict], hoy: date,
+                excluidos: list[dict] | None = None) -> tuple[list[dict], bool]:
+    """Replica la reconciliacion de ActualizarAhora. Devuelve (nuevo_dataset, hubo_cambios).
+    Si se pasa `excluidos`, se reemplaza IN PLACE su ventana con los pagos no validos traidos."""
     if not dataset:
         raise RuntimeError("data/pagos.json esta vacio - no deberia pasar tras la migracion inicial")
 
@@ -235,6 +273,9 @@ def reconciliar(session: requests.Session, dataset: list[dict], hoy: date) -> tu
 
     fetched_raw = fetch_range(session, reconcile_from, hoy)
     fetched = [parse_record(r) for r in fetched_raw if es_pago_valido(r)]
+    if excluidos is not None:
+        nuevos_excl = [{**parse_record(r), "motivo": motivo_exclusion(r)} for r in fetched_raw if not es_pago_valido(r)]
+        excluidos[:] = [r for r in excluidos if r["dt"].date() < reconcile_from] + nuevos_excl
 
     existing_ids = {r["id"] for r in dataset}
 
@@ -542,20 +583,24 @@ def calcular_agregados_por_anio(dataset: list[dict], hoy_real: date) -> dict[int
     return resultado
 
 
-def render_js_block(por_anio: dict[int, dict], anio_actual: int, generado_en_str: str) -> str:
+def render_js_block(por_anio: dict[int, dict], anio_actual: int, generado_en_str: str,
+                    excl_dia: dict | None = None) -> str:
     j = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
     years_json = "{" + ",".join(f'"{anio}":{_fmt_year_data(v)}' for anio, v in por_anio.items()) + "}"
     lines = [
         f"const generadoEn = {j(generado_en_str)};",
         f"const dataByYear = {years_json};",
         f"let anioSeleccionado = {anio_actual};",
+        f"const excluidosDia = {j(excl_dia or {})};",
     ]
     return "\n".join(lines)
 
 
-def render_report(dataset: list[dict], hoy: date, generado_en: datetime) -> str:
+def render_report(dataset: list[dict], hoy: date, generado_en: datetime,
+                  excluidos: list[dict] | None = None) -> str:
     por_anio = calcular_agregados_por_anio(dataset, hoy)
-    bloque = render_js_block(por_anio, hoy.year, generado_en.isoformat(timespec="minutes"))
+    bloque = render_js_block(por_anio, hoy.year, generado_en.isoformat(timespec="minutes"),
+                             excluidos_por_dia(excluidos or []))
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = f.read()
     if "{{DATOS_JS}}" not in template:
@@ -583,15 +628,17 @@ def main() -> int:
         return 1
 
     dataset = load_dataset()
-    nuevo_dataset, hubo_cambios = reconciliar(session, dataset, hoy)
+    excluidos = load_excluidos()
+    nuevo_dataset, hubo_cambios = reconciliar(session, dataset, hoy, excluidos)
 
     if not hubo_cambios:
         print("Nada nuevo que actualizar.")
         return 0
 
     save_dataset(nuevo_dataset)
+    save_excluidos(excluidos)
 
-    html = render_report(nuevo_dataset, hoy, generado_en)
+    html = render_report(nuevo_dataset, hoy, generado_en, excluidos)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(html)
 
