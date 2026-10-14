@@ -107,7 +107,19 @@ h1.title{font-size:26px; font-weight:700; letter-spacing:-.01em;}
 }
 .card h2{font-size:16px; font-weight:600; display:flex; align-items:baseline; gap:9px;}
 .card h2 .code{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--accent); font-weight:700;}
-.card p.note{color:var(--ink-2); font-size:12.5px; margin:6px 0 16px; max-width:68ch;}
+.card p.note{color:var(--ink-2); font-size:12.5px; margin:6px 0 16px;}
+.head{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 24px; margin-bottom:16px;}
+.head-r{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 16px;}
+.card .head p.note{margin:0;}
+details.info{font-size:12px; color:var(--ink-2);}
+details.info summary{cursor:pointer; color:var(--accent); font-weight:600; list-style:none;}
+details.info summary::-webkit-details-marker{display:none;}
+details.info summary::before{content:"\24D8  ";}
+details.info p{margin:6px 0 0; max-width:60ch;}
+.legend{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:11.5px; color:var(--ink-2); margin:0 0 12px;}
+.stats{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px;}
+.stat{background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:6px 11px; font-size:12px; color:var(--ink-2);}
+.stat b{color:var(--ink); font-size:13px;}
 .card h3{font-size:12.5px; font-weight:600; color:var(--ink-2); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;}
 .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
 @media (max-width:720px){.grid-2{grid-template-columns:1fr;}}
@@ -226,7 +238,7 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
 </div>
 <div class="stripe"></div>
 
-<div class="wrap">
+<div class="wrap" style="padding-bottom:0;">
   <div class="kpis" id="kpiRow"></div>
 </div>
 
@@ -235,8 +247,7 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
 <div class="wrap">
 
   <div class="card" id="sec-resumen">
-    <h2><span class="code">N&middot;01</span>Resumen mensual</h2>
-    <p class="note">Facturado y transacciones por mes, seg&uacute;n &ldquo;Fecha Creaci&oacute;n&rdquo;. T/D&iacute;a = transacciones &divide; d&iacute;as transcurridos del mes.</p>
+    <div class="head"><h2><span class="code">N&middot;01</span>Resumen mensual</h2><div class="head-r"><p class="note">T/Día = transacciones ÷ días del mes</p></div></div>
     <div class="grid-2">
       <div><h3>Facturado por mes</h3><div class="chart-box"><canvas id="chartMensualMonto"></canvas></div></div>
       <div><h3>Transacciones por mes</h3><div class="chart-box"><canvas id="chartMensualTrans"></canvas></div></div>
@@ -248,14 +259,13 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   </div>
 
   <div class="card" id="sec-proyeccion">
-    <h2><span class="code">N&middot;02</span>Proyecci&oacute;n fin de mes</h2>
+    <div class="head"><h2><span class="code">N&middot;02</span>Proyecci&oacute;n fin de mes</h2><div class="head-r"><details class="info"><summary>¿Cómo leer?</summary><p>La ponderada usa el promedio histórico de cada día de semana para estimar lo que falta del mes.</p></details></div></div>
     <div id="proyeccionTxt" class="txt"></div>
     <div class="progress"><div id="proyeccionBar"></div></div>
   </div>
 
   <div class="card" id="sec-promedio-dia">
-    <h2><span class="code">N&middot;03</span>Promedio por d&iacute;a de semana</h2>
-    <p class="note">Promedio de monto y transacciones por d&iacute;a de semana, calculado con los d&iacute;as del mes seleccionado.</p>
+    <div class="head"><h2><span class="code">N&middot;03</span>Promedio por d&iacute;a de semana</h2><div class="head-r"><p class="note">Del mes seleccionado</p></div></div>
     <div class="pillrow" id="mesButtons"></div>
     <div class="chart-box"><canvas id="chartDiaSemana"></canvas></div>
     <div class="tblwrap" style="margin-top:16px;">
@@ -265,10 +275,8 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   </div>
 
   <div class="card" id="sec-historial">
-    <h2><span class="code">N&middot;04</span>Historial diario</h2>
-    <p class="note">Facturado por d&iacute;a. Filtra por semana, mes o un rango de fechas.</p>
-    <p class="note" style="margin-top:4px;">El aviso &ldquo;&#9888; revisar&rdquo; significa transacciones muy por debajo de lo t&iacute;pico para ese d&iacute;a de la semana (d&iacute;a flojo real, o sincronizaci&oacute;n incompleta). &ldquo;&#9650; revisar alza&rdquo; marca un monto o n&uacute;mero de transacciones de 2 veces o m&aacute;s lo t&iacute;pico (evento real, o pagos duplicados). &ldquo;en curso&rdquo; marca el d&iacute;a en que se gener&oacute; este reporte &mdash; su total todav&iacute;a puede subir.</p>
-    <p class="note" style="margin-top:4px;">Solo se cuentan pagos exitosos con folio (boleta). La columna &ldquo;Excluidas&rdquo; muestra lo que ParkingApp registr&oacute; ese d&iacute;a y no se cuenta: pagos rechazados, sin folio, o duplicados del terminal Rpay.</p>
+    <div class="head"><h2><span class="code">N&middot;04</span>Historial diario</h2><div class="head-r"><details class="info"><summary>¿Cómo leer?</summary><p>Solo cuentan pagos exitosos con boleta. &ldquo;Excluidas&rdquo; = rechazados, sin folio o duplicados del terminal Rpay; no suman en ningún número del reporte.</p></details></div></div>
+    <div class="legend"><span>&#9888; revisar: muy bajo lo típico del día</span><span>&#9650; revisar alza: 2&times; lo típico</span><span>en curso: hoy, aún puede subir</span></div>
     <div id="histExcluidas"></div>
     <div id="histFiltro"></div>
     <div class="chart-box wide"><canvas id="chartHistorial"></canvas></div>
@@ -278,14 +286,13 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   </div>
 
   <div class="card" id="sec-horapico">
-    <h2><span class="code">N&middot;05</span>Hora pico</h2>
-    <p class="note" style="margin-bottom:6px;">Mostrando: <b id="horaPicoLabel">A&ntilde;o completo</b></p>
+    <div class="head"><h2><span class="code">N&middot;05</span>Hora pico</h2><div class="head-r"><p class="note">Mostrando: <b id="horaPicoLabel">A&ntilde;o completo</b></p><details class="info"><summary>¿Cómo leer?</summary><p>Ocupación estimada: se asume que cada auto paga al salir; los pagos con tarifa máxima usan una duración mínima estimada. Hoy no se cuenta mientras el día sigue en curso.</p></details></div></div>
     <div id="horaPicoFiltro"></div>
     <div id="horaPicoDias" class="pillrow" style="margin-bottom:10px;"></div>
-    <p class="note" id="horaPicoNota" style="margin:0 0 12px;"></p>
+    <div id="horaPicoNota" class="stats"></div>
     <div class="grid-2">
-      <div><h3>Hora del pago</h3><p class="note" style="margin:0 0 10px;">Pagos promedio en un d&iacute;a, por hora del cobro (&ldquo;Fecha Creaci&oacute;n&rdquo;).</p><div class="chart-box"><canvas id="chartHoraPico"></canvas></div></div>
-      <div><h3>Ocupaci&oacute;n estimada</h3><p class="note" style="margin:0 0 10px;">Asume pago al salir; los pagos con tarifa m&aacute;xima usan una duraci&oacute;n m&iacute;nima estimada, ya que su duraci&oacute;n real no se puede calcular exacta.</p><div class="chart-box"><canvas id="chartHoraPicoOcup"></canvas></div></div>
+      <div><h3>Pagos promedio por hora</h3><div class="chart-box"><canvas id="chartHoraPico"></canvas></div></div>
+      <div><h3>Autos estimados por hora</h3><div class="chart-box"><canvas id="chartHoraPicoOcup"></canvas></div></div>
     </div>
     <div class="scroll" style="max-height:220px;margin-top:16px;">
       <table><thead><tr><th>Hora</th><th>Pagos prom./d&iacute;a</th><th>Pagos total</th><th>Ocupaci&oacute;n prom./d&iacute;a</th><th>Ocupaci&oacute;n total</th></tr></thead>
@@ -294,9 +301,7 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   </div>
 
   <div class="card" id="sec-distribucion">
-    <h2><span class="code">N&middot;06</span>Distribuci&oacute;n de montos</h2>
-    <p class="note">Cantidad de pagos agrupados por rango de monto. Color = intensidad del rango (m&aacute;s oscuro = monto m&aacute;s alto).</p>
-    <p class="note" style="margin-bottom:6px;">Mostrando: <b id="distribLabel">A&ntilde;o completo</b></p>
+    <div class="head"><h2><span class="code">N&middot;06</span>Distribuci&oacute;n de montos</h2><div class="head-r"><p class="note">Mostrando: <b id="distribLabel">A&ntilde;o completo</b></p><details class="info"><summary>¿Cómo leer?</summary><p>Pagos agrupados por rango de monto; más oscuro = monto más alto. Los rangos son en pesos: como la tarifa sube con el tiempo, su equivalencia en minutos se corre.</p></details></div></div>
     <div id="distribFiltro"></div>
     <div class="chart-box tall"><canvas id="chartBuckets"></canvas></div>
     <p class="note" id="bucketsEquivNote" style="margin-top:10px;margin-bottom:0;"></p>
@@ -306,19 +311,16 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   </div>
 
   <div class="card" id="sec-ranking">
-    <h2><span class="code">N&middot;07</span>Ranking de d&iacute;as</h2>
-    <p class="note">Los 10 d&iacute;as con mayor y menor recaudaci&oacute;n del a&ntilde;o.</p>
+    <div class="head"><h2><span class="code">N&middot;07</span>Ranking de d&iacute;as</h2><div class="head-r"><p class="note">Mayor y menor recaudación del año &middot; &#9888; = muy bajo lo típico</p></div></div>
     <div class="grid-2">
       <div><h3>Mejores 10</h3><div class="tblwrap"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th></tr></thead><tbody id="tbodyMejores"></tbody></table></div></div>
       <div><h3>Peores 10</h3><div class="tblwrap"><table><thead><tr><th>Fecha</th><th>D&iacute;a</th><th>Monto</th></tr></thead><tbody id="tbodyPeores"></tbody></table></div></div>
     </div>
-    <p class="note" style="margin-top:12px;margin-bottom:0;">El aviso &ldquo;&#9888; revisar&rdquo; en un d&iacute;a significa que sus transacciones fueron muy inferiores a lo t&iacute;pico para ese d&iacute;a de la semana &mdash; puede ser un d&iacute;a real flojo, o una sincronizaci&oacute;n incompleta con ParkingApp. Conviene revisarlo manualmente.</p>
+
   </div>
 
   <div class="card" id="sec-heatmap">
-    <h2><span class="code">N&middot;08</span>Mapa de calor &mdash; hora &times; d&iacute;a</h2>
-    <p class="note">Cruce de hora del pago con d&iacute;a de semana. Por defecto muestra el promedio de un d&iacute;a t&iacute;pico (ej. &ldquo;un lunes a las 9:00&rdquo;); el n&uacute;mero junto a cada d&iacute;a es cu&aacute;ntos d&iacute;as de ese tipo entran en el promedio. El filtro aplica tambi&eacute;n a N&middot;09.</p>
-    <p class="note" style="margin-bottom:6px;">Mostrando: <b id="heatLabel">A&ntilde;o completo</b></p>
+    <div class="head"><h2><span class="code">N&middot;08</span>Mapa de calor &mdash; hora &times; d&iacute;a</h2><div class="head-r"><p class="note">Mostrando: <b id="heatLabel">A&ntilde;o completo</b> &middot; también aplica a N&middot;09</p><details class="info"><summary>¿Cómo leer?</summary><p>Pagos de un día típico por hora (ej. &ldquo;un lunes a las 9:00&rdquo;). El número junto a cada día es cuántos días de ese tipo entran en el promedio. Pasa el mouse sobre una casilla para ver el valor exacto.</p></details></div></div>
     <div id="heatFiltro"></div>
     <div id="heatModo" class="pillrow" style="margin-bottom:10px;"></div>
     <p class="note" id="heatNota" style="margin:0 0 12px;"></p>
@@ -326,14 +328,12 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
   </div>
 
   <div class="card" id="sec-heatmap-ocupacion">
-    <h2><span class="code">N&middot;09</span>Mapa de calor &mdash; ocupaci&oacute;n</h2>
-    <p class="note">Misma estimaci&oacute;n de ocupaci&oacute;n que N&middot;05. Usa el mismo per&iacute;odo y modo elegidos en N&middot;08.</p>
+    <div class="head"><h2><span class="code">N&middot;09</span>Mapa de calor &mdash; ocupaci&oacute;n</h2><div class="head-r"><p class="note">Autos estimados &middot; usa el filtro de N&middot;08</p></div></div>
     <div class="tblwrap"><div id="heatmapOcup"></div></div>
   </div>
 
   <div class="card" id="sec-tendencia">
-    <h2><span class="code">N&middot;10</span>Tendencia semanal</h2>
-    <p class="note">Compara las dos &uacute;ltimas semanas completas (lunes a domingo). Excluye la semana en curso.</p>
+    <div class="head"><h2><span class="code">N&middot;10</span>Tendencia semanal</h2><div class="head-r"><p class="note">Últimas 2 semanas completas (lun–dom)</p></div></div>
     <div id="tendenciaContainer"></div>
   </div>
 
@@ -359,17 +359,17 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
 
       <div class="ab-blk">
         <h3>Tendencias</h3>
-        <p class="note">Desde el primer mes con abonados. En ingreso, las barras claras son meses futuros ya comprometidos por contrato.</p>
+        <p class="note">Barras claras = meses futuros ya comprometidos por contrato.</p>
         <div class="grid-3">
           <div><h4 style="margin:0 0 8px;font-size:13px;">Ingreso (UF al mes)</h4><div class="chart-box"><canvas id="chartAbEvo"></canvas></div></div>
           <div><h4 style="margin:0 0 8px;font-size:13px;">Estacionamientos arrendados</h4><div class="chart-box"><canvas id="chartAbUni"></canvas></div></div>
-          <div><h4 style="margin:0 0 8px;font-size:13px;">Tarifa promedio (UF por estacionamiento)</h4><p class="note" style="margin:-4px 0 6px;" id="abTarNota">Con Todos, la l&iacute;nea punteada es el promedio de todos los sectores.</p><div class="chart-box"><canvas id="chartAbTar"></canvas></div></div>
+          <div><h4 style="margin:0 0 8px;font-size:13px;">Tarifa promedio (UF por estacionamiento)</h4><p class="note" style="margin:-4px 0 6px;" id="abTarNota">Punteada = promedio de todos los sectores.</p><div class="chart-box"><canvas id="chartAbTar"></canvas></div></div>
         </div>
       </div>
 
       <div class="ab-blk">
         <h3>Cupones de membres&iacute;a</h3>
-        <p class="note">Cupones de estacionamiento que se entregan a empresas (en Cttos, el nombre lleva &ldquo;Parking&rdquo;). Su valor cambia cada mes seg&uacute;n el uso: no se cuentan como contratos en el resto de la secci&oacute;n ni se proyectan a futuro.</p>
+        <p class="note">Cupones para empresas; su valor varía según el uso. No cuentan como contratos ni se proyectan.</p>
         <div class="kpis" id="abCupKpis" style="margin-top:10px;"></div>
         <p class="note" id="abCupAlerta" style="margin:10px 0 0;"></p>
         <div class="grid-2" style="margin-top:20px;">
@@ -380,7 +380,7 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
 
       <div class="ab-blk">
         <h3>Clientes</h3>
-        <p class="note">Nuevos y bajas respecto al mes anterior. Retenci&oacute;n: de los contratos de hace 3 o 12 meses, cu&aacute;ntos siguen facturando. Antig&uuml;edad: desde el inicio del primer contrato de cada cliente.</p>
+        <p class="note">Nuevos y bajas vs. mes anterior &middot; Ret. = contratos de hace 3 o 12 meses que siguen facturando</p>
         <div class="grid-2">
           <div><div class="tblwrap"><table><thead><tr><th>Mes</th><th>Contratos</th><th>Nuevos</th><th>Bajas</th><th>Ret. 3 m</th><th>Ret. 12 m</th></tr></thead><tbody id="abMov"></tbody></table></div></div>
           <div><div class="chart-box"><canvas id="chartAbAnt"></canvas></div><p class="note" style="margin-top:8px;" id="abAntNota"></p></div>
@@ -399,14 +399,14 @@ footer{text-align:center; color:var(--ink-muted); font-size:11.5px; padding:32px
 
       <div class="ab-blk">
         <details class="ab-ctrl"><summary>Control: cuadre con R. Parking (12 meses)</summary>
-          <p class="note" style="margin:0 0 10px;">Compara el total del detalle (contratos + cupones) con lo registrado en la hoja R. Parking de Ficha Cliente.</p>
+          <p class="note" style="margin:0 0 10px;">Detalle (contratos + cupones) vs. hoja R. Parking de Ficha Cliente.</p>
           <div class="tblwrap"><table><thead><tr><th>Mes</th><th>Detalle</th><th>R. Parking</th><th>Diferencia</th></tr></thead><tbody id="abCuadre"></tbody></table></div>
         </details>
       </div>
 
       <div class="ab-lock" id="abLock">
         <h3 style="margin-top:0;">&#128274; Detalle con nombres</h3>
-        <p class="note" style="margin:0 0 10px;">Solo para personas autorizadas. Los datos est&aacute;n cifrados y se abren en este navegador con la clave; la clave no se env&iacute;a a ning&uacute;n lado.</p>
+        <p class="note" style="margin:0 0 10px;">Solo personas autorizadas. Se descifra en este navegador; la clave no se envía.</p>
         <div id="abLockForm" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <input type="password" id="abClave" placeholder="Clave" autocomplete="current-password" aria-label="Clave">
           <button type="button" class="pill" id="abAbrir">Ver detalle</button>
@@ -563,7 +563,7 @@ function renderProyeccion(proyeccionPonderada){
     '<li style="margin-bottom:4px;">Proyección lineal simple: <b>'+fmtCLP(proyeccionMesActual)+'</b></li>'+
     '<li>Proyección ponderada por día de semana: <b>'+fmtCLP(proyeccionPonderada)+'</b></li>'+
     '</ul>'+
-    '<span style="display:block;margin-top:8px;color:var(--ink-muted);font-size:11.5px;">La ponderada usa el promedio histórico de cada día de semana para estimar lo que falta del mes.</span>';
+    '';
   document.getElementById('proyeccionBar').style.width = Math.min(100, diasTranscurridosMesActual/diasTotalesMesActual*100)+'%';
 }
 
@@ -732,8 +732,8 @@ function renderExcluidas(){
     Object.keys(tot).forEach(function(k){ tot[k]+=e[k]||0; });
   });
   box.innerHTML = tot.n
-    ? '<p class="note" style="margin-top:4px;"><span class="chip neg">Excluidas &uacute;ltimos 30 d&iacute;as</span> <b>'+tot.n+'</b> transacciones por <b>'+fmtCLP(tot.m)+'</b> en '+dias+' d&iacute;a'+(dias===1?'':'s')+' ('+exclDetalle(tot)+'). No suman en ning&uacute;n n&uacute;mero del reporte.</p>'
-    : '<p class="note" style="margin-top:4px;">&Uacute;ltimos 30 d&iacute;as: ninguna transacci&oacute;n excluida.</p>';
+    ? '<div class="stats"><span class="stat">Excluidas 30 d&iacute;as <b>'+tot.n+'</b> &middot; <b>'+fmtCLP(tot.m)+'</b></span><span class="stat">'+exclDetalle(tot)+'</span></div>'
+    : '<div class="stats"><span class="stat">Excluidas 30 d&iacute;as: <b>0</b></span></div>';
 }
 document.getElementById('buscar').addEventListener('input', function(e){renderDiario(e.target.value);});
 
@@ -789,16 +789,15 @@ function renderHoraPico(dataArr, label){
   document.getElementById('horaPicoLabel').textContent = label + (hpDias!=='todos' ? ' · solo '+nombreDias : '');
   var nota;
   if(!n){
-    nota = 'No hay días completos en este período para calcular un promedio.';
+    nota = '<span class="stat">Sin días completos en este período</span>';
   } else {
     var hMax = promPagos.indexOf(Math.max.apply(null, promPagos));
     var hMaxO = promOcup.indexOf(Math.max.apply(null, promOcup));
     var pagosDia = promPagos.reduce(function(a,b){return a+b;},0);
-    nota = 'Promedio sobre <b>'+n+'</b> día'+(n===1?'':'s')+' completo'+(n===1?'':'s')+
-      (excluyeHoy ? ' (hoy no se cuenta porque el día sigue en curso)' : '')+
-      '. Hora con más pagos: <b>'+hMax+':00</b> ('+fmt1(promPagos[hMax])+' pagos/día). '+
-      'Mayor ocupación estimada: <b>'+hMaxO+':00</b> ('+fmt1(promOcup[hMaxO])+' autos). '+
-      'En total, '+fmt1(pagosDia)+' pagos en un día promedio.';
+    nota = '<span class="stat">Más pagos <b>'+hMax+':00</b> &middot; '+fmt1(promPagos[hMax])+'/día</span>'+
+      '<span class="stat">Más ocupado <b>'+hMaxO+':00</b> &middot; '+fmt1(promOcup[hMaxO])+' autos</span>'+
+      '<span class="stat"><b>'+fmt1(pagosDia)+'</b> pagos en un día promedio</span>'+
+      '<span class="stat">Base: <b>'+n+'</b> día'+(n===1?'':'s')+'</span>';
   }
   document.getElementById('horaPicoNota').innerHTML = nota;
 
@@ -841,8 +840,7 @@ function renderDistribucion(dataArr, label){
     var cuts=[1000,2000,3000,5000,10000,15000];
     var mins=cuts.map(function(c){return Math.round(c/tarifaMinActual);});
     document.getElementById('bucketsEquivNote').innerHTML =
-      'A la tarifa actual ('+tarifaMinActual+' CLP/min), esos cortes equivalen aprox. a '+mins.join(', ')+' minutos. '+
-      'Como la tarifa sube con el tiempo, esta equivalencia se corre — los rangos en pesos no se ajustan solos.';
+      'A $'+tarifaMinActual+'/min los cortes equivalen a ≈ '+mins.join(', ')+' min.';
   }
 
   requestAnimationFrame(function(){
@@ -938,8 +936,8 @@ function renderHeatmaps(dataArr, label){
   var nDias = a.cnt.reduce(function(x,y){return x+y;},0);
   var hayHoy = dataArr.some(esDiaEnCurso);
   document.getElementById('heatNota').innerHTML = heatModo==='prom'
-    ? 'Promedio sobre <b>'+nDias+'</b> días completos'+(hayHoy?' (hoy no se cuenta porque sigue en curso)':'')+'. Pasa el mouse sobre una casilla para ver el valor exacto.'
-    : 'Suma de <b>'+nDias+'</b> días del período. Ojo: si el período no tiene la misma cantidad de cada día de la semana, las filas no son comparables entre sí — para comparar usa &ldquo;Promedio por día&rdquo;.';
+    ? 'Promedio de <b>'+nDias+'</b> días completos'+(hayHoy?' (sin hoy)':'')+'.'
+    : 'Suma de <b>'+nDias+'</b> días. Para comparar filas usa &ldquo;Promedio por día&rdquo;.';
 }
 
 /* ---------- N-10 tendencia ---------- */
