@@ -37,6 +37,10 @@ import requests
 
 TZ = ZoneInfo("America/Santiago")
 RECONCILE_DAYS = 5
+# La API filtra por fecha de pago (paid_at) pero el dataset usa fecha de creacion;
+# un cajero offline puede subir un pago al dia siguiente de cobrarlo. Se pide un
+# margen extra hacia atras para no borrar esos pagos de la ventana.
+PAID_MARGIN_DAYS = 3
 BASE_URL = "https://admin.parkingapp.cl"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/151.0.0.0",
@@ -271,7 +275,8 @@ def reconciliar(session: requests.Session, dataset: list[dict], hoy: date,
     last_date = last_dt.date()
     reconcile_from = last_date - timedelta(days=RECONCILE_DAYS - 1)
 
-    fetched_raw = fetch_range(session, reconcile_from, hoy)
+    fetched_raw = fetch_range(session, reconcile_from - timedelta(days=PAID_MARGIN_DAYS), hoy)
+    fetched_raw = [r for r in fetched_raw if parse_record(r)["dt"].date() >= reconcile_from]
     fetched = [parse_record(r) for r in fetched_raw if es_pago_valido(r)]
     if excluidos is not None:
         nuevos_excl = [{**parse_record(r), "motivo": motivo_exclusion(r)} for r in fetched_raw if not es_pago_valido(r)]
