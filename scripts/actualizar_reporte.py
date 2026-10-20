@@ -25,6 +25,7 @@ import json
 import os
 import re
 import sys
+import time
 from calendar import monthrange
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -161,6 +162,30 @@ def clean_money(s) -> float:
         return 0.0
 
 
+# 2026-10-20: ParkingApp empezo a responder 429 (Too Many Requests) tras ~30
+# paginas seguidas. Se espera entre paginas y, si igual llega un 429, se
+# respeta Retry-After (o 60 s) y se reintenta la MISMA pagina.
+PAUSA_ENTRE_PAGINAS = 1.5
+REINTENTOS_429 = 6
+
+
+def get_con_reintento(session: requests.Session, url: str, params: dict, page: int) -> requests.Response:
+    if page > 1:
+        time.sleep(PAUSA_ENTRE_PAGINAS)
+    for intento in range(REINTENTOS_429 + 1):
+        r = session.get(url, params=params, headers=HEADERS, timeout=30)
+        if r.status_code != 429 or intento == REINTENTOS_429:
+            return r
+        try:
+            espera = max(5, min(300, int(r.headers.get("Retry-After", "60"))))
+        except ValueError:
+            espera = 60
+        limites = {k: v for k, v in r.headers.items() if "rate" in k.lower() or k.lower() == "retry-after"}
+        print(f"429 en pagina {page} (intento {intento + 1}); espero {espera}s. Headers: {limites}", flush=True)
+        time.sleep(espera)
+    return r
+
+
 def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]:
     records: list[dict] = []
     page = 1
@@ -172,7 +197,7 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
             "end_date": end.strftime("%d-%m-%Y"),
             "date_filter_type": "paid_at",
         }
-        r = session.get(f"{BASE_URL}/pagos.json", params=params, headers=HEADERS, timeout=30)
+        r = get_con_reintento(session, f"{BASE_URL}/pagos.json", params, page)
         if r.status_code != 200:
             raise RuntimeError(f"ParkingApp respondio {r.status_code} en la pagina {page}")
         data = r.json()
