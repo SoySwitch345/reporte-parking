@@ -47,7 +47,6 @@ PAID_MARGIN_DAYS = 3
 # "liviana": baja hoy y ayer y solo AGREGA ids nuevos (nunca borra).
 HORA_CORTE_COMPLETO = 12
 LIVIANO_DIAS = 1
-POR_PAGINA = 100
 BASE_URL = "https://admin.parkingapp.cl"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/151.0.0.0",
@@ -202,15 +201,17 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
             "start_date": start.strftime("%d-%m-%Y"),
             "end_date": end.strftime("%d-%m-%Y"),
             "date_filter_type": "paid_at",
-            "per_page": POR_PAGINA,
         }
         r = get_con_reintento(session, f"{BASE_URL}/pagos.json", params, page)
         if r.status_code != 200:
             raise RuntimeError(f"ParkingApp respondio {r.status_code} en la pagina {page}")
         data = r.json()
-        records.extend(data.get("collection") or [])
-        if page == 1:
-            print(f"Pagina 1: {len(data.get('collection') or [])} filas (per_page pedido {POR_PAGINA}).", flush=True)
+        filas = data.get("collection") or []
+        # ParkingApp sigue dando next_page aunque ya vengan paginas vacias
+        # (mismo criterio que el VBA desde 2026-10-19): vacia = fin.
+        if not filas:
+            break
+        records.extend(filas)
         # El "next_page" real vive DENTRO de "pagination" (un dict con
         # {"href","page"} o None en la ultima pagina) - no es un campo raiz.
         pagination = data.get("pagination") or {}
@@ -219,6 +220,7 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
         page += 1
         if page > 500:
             raise RuntimeError("Demasiadas paginas al descargar de ParkingApp (posible loop infinito)")
+    print(f"Descargadas {page} paginas, {len(records)} filas.", flush=True)
     return records
 
 
