@@ -42,6 +42,12 @@ RECONCILE_DAYS = 5
 # un cajero offline puede subir un pago al dia siguiente de cobrarlo. Se pide un
 # margen extra hacia atras para no borrar esos pagos de la ventana.
 PAID_MARGIN_DAYS = 3
+# 2026-10-20: ParkingApp limita la tasa (429). Solo la corrida de la manana
+# (hora Chile < HORA_CORTE_COMPLETO) rehace la ventana completa; el resto es
+# "liviana": baja hoy y ayer y solo AGREGA ids nuevos (nunca borra).
+HORA_CORTE_COMPLETO = 12
+LIVIANO_DIAS = 1
+POR_PAGINA = 100
 BASE_URL = "https://admin.parkingapp.cl"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/151.0.0.0",
@@ -196,12 +202,15 @@ def fetch_range(session: requests.Session, start: date, end: date) -> list[dict]
             "start_date": start.strftime("%d-%m-%Y"),
             "end_date": end.strftime("%d-%m-%Y"),
             "date_filter_type": "paid_at",
+            "per_page": POR_PAGINA,
         }
         r = get_con_reintento(session, f"{BASE_URL}/pagos.json", params, page)
         if r.status_code != 200:
             raise RuntimeError(f"ParkingApp respondio {r.status_code} en la pagina {page}")
         data = r.json()
         records.extend(data.get("collection") or [])
+        if page == 1:
+            print(f"Pagina 1: {len(data.get('collection') or [])} filas (per_page pedido {POR_PAGINA}).", flush=True)
         # El "next_page" real vive DENTRO de "pagination" (un dict con
         # {"href","page"} o None en la ultima pagina) - no es un campo raiz.
         pagination = data.get("pagination") or {}
@@ -325,6 +334,28 @@ def reconciliar(session: requests.Session, dataset: list[dict], hoy: date,
     kept = [r for r in dataset if r["dt"].date() < reconcile_from]
     nuevo = kept + window_block + future_new
     return nuevo, True
+
+
+def reconciliar_liviano(session: requests.Session, dataset: list[dict], hoy: date,
+                        excluidos: list[dict]) -> tuple[list[dict], bool]:
+    """Solo agrega pagos nuevos de hoy/ayer (por fecha de pago). No borra nada:
+    las correcciones (folios tardios, cajeros offline) las hace la corrida completa."""
+    fetched_raw = fetch_range(session, hoy - timedelta(days=LIVIANO_DIAS), hoy)
+    existing_ids = {r["id"] for r in dataset}
+    nuevos = [parse_record(r) for r in fetched_raw if es_pago_valido(r)]
+    nuevos = [r for r in nuevos if r["id"] not in existing_ids]
+    validos_ids = existing_ids | {r["id"] for r in nuevos}
+    excl_ids = {r["id"] for r in excluidos}
+    nuevos_excl = [{**parse_record(r), "motivo": motivo_exclusion(r)} for r in fetched_raw
+                   if not es_pago_valido(r)]
+    nuevos_excl = [r for r in nuevos_excl if r["id"] not in excl_ids and r["id"] not in validos_ids]
+    # Un pago que estaba excluido (p.ej. sin folio) y ahora llego valido sale de excluidos.
+    quedan = [r for r in excluidos if r["id"] not in validos_ids]
+    salieron = len(excluidos) - len(quedan)
+    excluidos[:] = quedan + nuevos_excl
+    if not nuevos and not salieron and not nuevos_excl:
+        return dataset, False
+    return sorted(dataset + nuevos, key=lambda r: r["dt"]), True
 
 
 # ---------------------------------------------------------------------------
@@ -659,7 +690,12 @@ def main() -> int:
 
     dataset = load_dataset()
     excluidos = load_excluidos()
-    nuevo_dataset, hubo_cambios = reconciliar(session, dataset, hoy, excluidos)
+    modo = os.environ.get("MODO") or ("completo" if generado_en.hour < HORA_CORTE_COMPLETO else "liviano")
+    print(f"Modo: {modo}", flush=True)
+    if modo == "completo":
+        nuevo_dataset, hubo_cambios = reconciliar(session, dataset, hoy, excluidos)
+    else:
+        nuevo_dataset, hubo_cambios = reconciliar_liviano(session, dataset, hoy, excluidos)
 
     if not hubo_cambios:
         print("Nada nuevo que actualizar.")
